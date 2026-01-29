@@ -476,6 +476,8 @@ def send_password_reset_email(to_email: str, code: str):
         print(f"✗ Failed to send password reset email to {to_email}: {str(e)}")
 
 
+def create_access_token(user_id: str, role: str) -> str:
+    """Create JWT access token for authentication"""
     expire = datetime.now(timezone.utc) + timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
     to_encode = {"sub": user_id, "role": role, "exp": expire}
     return jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
