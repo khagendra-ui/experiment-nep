@@ -1374,82 +1374,194 @@ async def get_tourist_pois(bbox: Optional[str] = None, country: Optional[str] = 
         logging.error(f"Overpass tourist request failed: {str(e)}")
         raise HTTPException(status_code=502, detail="Failed to fetch tourist POIs from Overpass")
 
+# ==================== SOS EMERGENCY ENDPOINT ====================
+class SOSRequest(BaseModel):
+    latitude: float
+    longitude: float
+    user_name: Optional[str] = None
+    user_email: Optional[str] = None
+    user_phone: Optional[str] = None
+    emergency_type: str = "general"  # general, medical, accident, lost
+    message: Optional[str] = None
+
+class SOSResponse(BaseModel):
+    id: str
+    status: str
+    message: str
+    nearest_contacts: List[dict]
+
+@api_router.post("/sos", response_model=SOSResponse)
+async def send_sos(sos_request: SOSRequest, background: BackgroundTasks):
+    """Send emergency SOS alert with GPS location to rescue teams"""
+    try:
+        # Create SOS record
+        sos_id = str(uuid.uuid4())
+        sos_record = {
+            "id": sos_id,
+            "latitude": sos_request.latitude,
+            "longitude": sos_request.longitude,
+            "user_name": sos_request.user_name or "Anonymous",
+            "user_email": sos_request.user_email,
+            "user_phone": sos_request.user_phone,
+            "emergency_type": sos_request.emergency_type,
+            "message": sos_request.message,
+            "status": "active",
+            "created_at": datetime.now(timezone.utc).isoformat(),
+            "google_maps_link": f"https://www.google.com/maps?q={sos_request.latitude},{sos_request.longitude}"
+        }
+        
+        await db.sos_alerts.insert_one(sos_record)
+        
+        # Get nearest emergency contacts
+        emergency_contacts = await db.emergency_contacts.find({}).to_list(10)
+        nearest_contacts = []
+        
+        for contact in emergency_contacts:
+            nearest_contacts.append({
+                "name": contact.get("name"),
+                "phone": contact.get("phone"),
+                "category": contact.get("category")
+            })
+        
+        # Send email notification to rescue team (background task)
+        background.add_task(send_sos_notification, sos_record, nearest_contacts)
+        
+        logging.info(f"[SOS] Emergency alert created: {sos_id} at ({sos_request.latitude}, {sos_request.longitude})")
+        
+        return SOSResponse(
+            id=sos_id,
+            status="sent",
+            message="Emergency alert sent! Help is on the way. Stay calm and stay where you are if safe.",
+            nearest_contacts=nearest_contacts[:5]
+        )
+        
+    except Exception as e:
+        logging.error(f"[SOS] Error: {str(e)}")
+        raise HTTPException(status_code=500, detail="Failed to send SOS alert")
+
+def send_sos_notification(sos_record: dict, contacts: list):
+    """Send SOS email notification to rescue teams"""
+    smtp_host = os.environ.get('SMTP_HOST')
+    smtp_user = os.environ.get('SMTP_USER')
+    smtp_pass = os.environ.get('SMTP_PASS')
+    
+    if not smtp_host or not smtp_user or not smtp_pass:
+        logging.info(f"[SOS EMAIL] Would send alert for: {sos_record['id']} - Location: {sos_record['google_maps_link']}")
+        return
+    
+    try:
+        subject = f"🚨 EMERGENCY SOS ALERT - {sos_record['emergency_type'].upper()}"
+        html_body = f"""
+        <html>
+        <body style="font-family: Arial; padding: 20px;">
+            <div style="background: #DC143C; color: white; padding: 20px; border-radius: 8px;">
+                <h1>🚨 EMERGENCY SOS ALERT</h1>
+            </div>
+            <div style="padding: 20px; background: #f9f9f9; margin-top: 10px; border-radius: 8px;">
+                <h2>Emergency Details</h2>
+                <p><strong>Type:</strong> {sos_record['emergency_type']}</p>
+                <p><strong>Name:</strong> {sos_record['user_name']}</p>
+                <p><strong>Email:</strong> {sos_record.get('user_email', 'Not provided')}</p>
+                <p><strong>Phone:</strong> {sos_record.get('user_phone', 'Not provided')}</p>
+                <p><strong>Message:</strong> {sos_record.get('message', 'No message')}</p>
+                <h2>📍 Location</h2>
+                <p><strong>Coordinates:</strong> {sos_record['latitude']}, {sos_record['longitude']}</p>
+                <p><a href="{sos_record['google_maps_link']}" style="background: #003893; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px;">View on Google Maps</a></p>
+                <p><strong>Time:</strong> {sos_record['created_at']}</p>
+            </div>
+        </body>
+        </html>
+        """
+        
+        msg = EmailMessage()
+        msg['Subject'] = subject
+        msg['From'] = smtp_user
+        msg['To'] = smtp_user  # Send to admin email
+        msg.set_content(f"SOS Alert from {sos_record['user_name']} at {sos_record['google_maps_link']}")
+        msg.add_alternative(html_body, subtype='html')
+        
+        with smtplib.SMTP(smtp_host, 587, timeout=10) as server:
+            server.starttls()
+            server.login(smtp_user, smtp_pass)
+            server.send_message(msg)
+        
+        logging.info(f"[SOS] Email notification sent for alert {sos_record['id']}")
+    except Exception as e:
+        logging.error(f"[SOS] Failed to send email: {str(e)}")
+
+@api_router.get("/admin/sos-alerts")
+async def get_sos_alerts(admin_id: str = Depends(get_admin_user)):
+    """Get all SOS alerts (admin only)"""
+    alerts = await db.sos_alerts.find({}, {"_id": 0}).sort("created_at", -1).to_list(100)
+    return alerts
+
+@api_router.patch("/admin/sos-alerts/{alert_id}")
+async def update_sos_alert(alert_id: str, status: dict, admin_id: str = Depends(get_admin_user)):
+    """Update SOS alert status"""
+    await db.sos_alerts.update_one(
+        {"id": alert_id},
+        {"$set": {"status": status.get("status", "resolved"), "resolved_at": datetime.now(timezone.utc).isoformat()}}
+    )
+    return {"message": "Alert updated"}
+
 # ==================== CHATBOT ENDPOINT ====================
 # Store conversation history in memory (for production, use a database)
 conversation_history = {}
 
 @api_router.post("/chatbot", response_model=ChatResponse)
 async def chat_with_bot(chat_input: ChatMessage):
+    """AI-powered travel assistant using OpenAI GPT via Emergent"""
     try:
-        from openai import OpenAI
+        from emergentintegrations.llm.chat import LlmChat, UserMessage
         
         session_id = chat_input.session_id or str(uuid.uuid4())
-        api_key = os.environ.get('OPENAI_API_KEY')
+        api_key = os.environ.get('EMERGENT_LLM_KEY')
         
         if not api_key:
-            logging.warning("OPENAI_API_KEY not configured")
+            logging.warning("EMERGENT_LLM_KEY not configured")
             return ChatResponse(
-                response="AI Assistant is not configured. Please set OPENAI_API_KEY environment variable.",
+                response="AI Assistant is not configured. Please contact support.",
                 session_id=session_id
             )
         
-        client = OpenAI(api_key=api_key)
-        
-        # Initialize conversation history for this session if not exists
-        if session_id not in conversation_history:
-            conversation_history[session_id] = []
-        
-        # Add system message if first message
-        if not conversation_history[session_id]:
-            conversation_history[session_id].append({
-                "role": "system",
-                "content": """You are NepSafe AI Assistant, a helpful chatbot for Nepal tourism. 
-You provide information about:
-- Trekking permits and visa requirements
-- Hotels and accommodation in Nepal
-- Best time to visit and weather conditions
-- Safety tips and emergency procedures
-- Local culture, food, and attractions
-- Permit types and hiking routes
+        # Create chat instance with system message
+        chat = LlmChat(
+            api_key=api_key,
+            session_id=session_id,
+            system_message="""You are NepSafe AI Assistant, an expert travel guide for Nepal tourism.
 
-Always respond in a friendly, helpful manner. You can respond in English or Nepali.
-If asked about something outside your domain, politely redirect to tourism-related topics."""
-            })
+Your expertise includes:
+- Trekking permits (TIMS, Annapurna, Everest, Langtang, Manaslu)
+- Visa requirements and immigration
+- Hotels and accommodation across Nepal
+- Best times to visit different regions
+- Weather conditions and seasonal advice
+- Safety tips and emergency procedures  
+- Local culture, festivals, and traditions
+- Food recommendations and dietary tips
+- Transportation and logistics
+- Altitude sickness prevention
+
+Guidelines:
+- Be friendly, helpful, and concise
+- Provide practical, actionable advice
+- Include safety warnings when relevant
+- Suggest alternatives when appropriate
+- You can respond in English or Nepali based on the user's language
+- For emergencies, always recommend using the SOS button"""
+        ).with_model("openai", "gpt-5.2")
         
-        # Add user message to history
-        conversation_history[session_id].append({
-            "role": "user",
-            "content": chat_input.message
-        })
+        # Send message and get response
+        user_message = UserMessage(text=chat_input.message)
+        response = await chat.send_message(user_message)
         
-        # Call OpenAI API
-        response = client.chat.completions.create(
-            model="gpt-3.5-turbo",
-            messages=conversation_history[session_id],
-            max_tokens=500,
-            temperature=0.7
-        )
-        
-        assistant_message = response.choices[0].message.content
-        
-        # Add assistant response to history
-        conversation_history[session_id].append({
-            "role": "assistant",
-            "content": assistant_message
-        })
-        
-        # Keep history manageable (last 20 messages)
-        if len(conversation_history[session_id]) > 22:  # 20 + system message
-            # Keep system message at index 0
-            system_msg = conversation_history[session_id][0]
-            conversation_history[session_id] = [system_msg] + conversation_history[session_id][-20:]
-        
-        return ChatResponse(response=assistant_message, session_id=session_id)
+        logging.info(f"[CHATBOT] Response generated for session {session_id}")
+        return ChatResponse(response=response, session_id=session_id)
         
     except Exception as e:
         logging.error(f"Chatbot error: {str(e)}")
         return ChatResponse(
-            response="I apologize, but I'm having trouble right now. Please try again later.",
+            response="I apologize, but I'm having trouble right now. Please try again later or use the SOS button for emergencies.",
             session_id=chat_input.session_id or str(uuid.uuid4())
         )
 
