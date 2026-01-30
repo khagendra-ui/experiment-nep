@@ -1,82 +1,67 @@
+// FastAPI backend for NepSafe tourism app
+// Handles authentication, permits, hotels, destinations, and bookings
+
 from fastapi import FastAPI, APIRouter, HTTPException, Depends, UploadFile, File, Form, status, BackgroundTasks
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from starlette.middleware.cors import CORSMiddleware
 from motor.motor_asyncio import AsyncIOMotorClient
-import os
-import logging
+import os, logging, jwt, bcrypt, uuid, base64, random, httpx, smtplib
 from pathlib import Path
 from dotenv import load_dotenv
 from pydantic import BaseModel, Field, ConfigDict, EmailStr
 from typing import List, Optional
-import uuid
 from datetime import datetime, timezone, timedelta
-import jwt
-import bcrypt
-import base64
-import random
 from io import BytesIO
 from PIL import Image
-import httpx
 from fastapi.responses import JSONResponse
-import smtplib
 from email.message import EmailMessage
 
 ROOT_DIR = Path(__file__).parent
 load_dotenv(ROOT_DIR / '.env')
 
-# MongoDB connection
+# MongoDB setup
 mongo_url = os.environ['MONGO_URL']
 client = AsyncIOMotorClient(mongo_url)
 db = client[os.environ['DB_NAME']]
 
-# JWT Configuration
+# Auth configuration
 SECRET_KEY = os.environ.get('SECRET_KEY', 'your-secret-key-change-in-production')
 ALGORITHM = "HS256"
-ACCESS_TOKEN_EXPIRE_MINUTES = 60 * 24 * 7  # 7 days
-
-# LLM Configuration removed (chat service disabled in this build)
-# If you want to enable an external AI service later, configure it here
+ACCESS_TOKEN_EXPIRE_MINUTES = 60 * 24 * 7
 
 security = HTTPBearer()
 
 # Create the main app without a prefix
 app = FastAPI()
 
-# ---------------------- Security & Rate Limiting ----------------------
+# Security middleware and rate limiting
 import time
 from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.requests import Request
 
-# Config (override via environment)
-BACKEND_MAX_BODY_SIZE_BYTES = int(os.environ.get("BACKEND_MAX_BODY_SIZE_BYTES", str(2 * 1024 * 1024)))  # 2MB default
+BACKEND_MAX_BODY_SIZE_BYTES = int(os.environ.get("BACKEND_MAX_BODY_SIZE_BYTES", str(2 * 1024 * 1024)))
 BACKEND_RATE_LIMIT_WINDOW_SECONDS = int(os.environ.get("BACKEND_RATE_LIMIT_WINDOW_SECONDS", "60"))
 BACKEND_RATE_LIMIT_MAX_REQUESTS = int(os.environ.get("BACKEND_RATE_LIMIT_MAX_REQUESTS", "120"))
-
-# In-memory store for rate limiter: ip -> (count, window_start)
 RATE_LIMIT_STORE = {}
 
+# Add security headers to all responses
 class SecurityHeadersMiddleware(BaseHTTPMiddleware):
     async def dispatch(self, request: Request, call_next):
         response = await call_next(request)
-        # Default security headers
         csp = os.environ.get("CONTENT_SECURITY_POLICY", "default-src 'self'; img-src 'self' data: https:; script-src 'self' 'unsafe-inline' https:; style-src 'self' 'unsafe-inline' https:;")
         response.headers.setdefault("Content-Security-Policy", csp)
         response.headers.setdefault("X-Frame-Options", "DENY")
         response.headers.setdefault("X-Content-Type-Options", "nosniff")
         response.headers.setdefault("Referrer-Policy", "strict-origin-when-cross-origin")
-        # HSTS - safe to set in production behind TLS
         response.headers.setdefault("Strict-Transport-Security", "max-age=63072000; includeSubDomains; preload")
         return response
 
+# Enforce max body size limit
 class BodySizeLimitMiddleware(BaseHTTPMiddleware):
     async def dispatch(self, request: Request, call_next):
         content_length = request.headers.get("content-length")
-        if content_length:
-            try:
-                if int(content_length) > BACKEND_MAX_BODY_SIZE_BYTES:
-                    return JSONResponse(status_code=413, content={"detail": "Request body too large"})
-            except ValueError:
-                pass
+        if content_length and int(content_length) > BACKEND_MAX_BODY_SIZE_BYTES:
+            return JSONResponse(status_code=413, content={"detail": "Request body too large"})
         return await call_next(request)
 
 class SimpleRateLimiterMiddleware(BaseHTTPMiddleware):

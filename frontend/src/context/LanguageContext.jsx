@@ -1,7 +1,9 @@
+// Global language context for bilingual support (English/Nepali)
 import React, { createContext, useContext, useState, useEffect } from 'react';
 
 const LanguageContext = createContext();
 
+// Hook to access language context
 export const useLanguage = () => {
   const context = useContext(LanguageContext);
   if (!context) {

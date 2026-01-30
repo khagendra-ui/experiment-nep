@@ -5,8 +5,9 @@ import { Card, CardContent } from '@/components/ui/card';
 import { useLanguage } from '@/context/LanguageContext';
 import { Link } from 'react-router-dom';
 
+// Shared destination data used across the app - includes all tourist locations with bilingual content
 export const destinationsData = [
-    // National Parks
+    // National Parks - protected areas with unique ecosystems
     {
       id: 1,
       name: 'Sagarmatha (Everest) National Park',

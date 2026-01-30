@@ -1,3 +1,4 @@
+// Top navigation bar with responsive design and user menu
 import { useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { Menu, X, User, LogOut, Mountain, Hotel, FileText, Map, Shield, LayoutDashboard, ChevronDown } from 'lucide-react';

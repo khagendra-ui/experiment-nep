@@ -1,7 +1,10 @@
+// Core app setup - routing, HTTP client, UI components
 import { useState, useEffect } from "react";
 import "@/App.css";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import axios from "axios";
+
+// Page components organized by feature
 import HomePage from "@/pages/HomePage";
 import HotelsPage from "@/pages/HotelsPage";
 import PermitsPage from "@/pages/PermitsPage";
@@ -26,14 +29,16 @@ import CookieConsent from "@/components/CookieConsent";
 import { LanguageProvider } from "@/context/LanguageContext";
 import { Toaster } from "@/components/ui/sonner";
 
+// Backend API configuration
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL || 'http://localhost:8000';
 export const API = `${BACKEND_URL}/api`;
 
+// Centralized axios instance for all API requests
 export const axiosInstance = axios.create({
   baseURL: API,
 });
 
-// Add auth interceptor
+// Add auth token to all requests
 axiosInstance.interceptors.request.use((config) => {
   const token = localStorage.getItem('token');
   if (token) {
@@ -47,8 +52,9 @@ function App() {
   const [showAuth, setShowAuth] = useState(false);
   const [loading, setLoading] = useState(true);
 
+  // Initialize app - seed data and check auth
   useEffect(() => {
-    // Seed data on first load
+    // Seed database with initial data on startup
     const seedData = async () => {
       try {
         await axios.post(`${API}/seed-data`);
@@ -58,7 +64,7 @@ function App() {
     };
     seedData();
 
-    // Check if user is logged in
+    // Check for existing auth token
     const token = localStorage.getItem('token');
     if (token) {
       fetchUser();
@@ -67,6 +73,7 @@ function App() {
     }
   }, []);
 
+  // Fetch user profile from backend
   const fetchUser = async () => {
     try {
       const response = await axiosInstance.get('/auth/me');
@@ -79,12 +86,14 @@ function App() {
     }
   };
 
+  // Clear auth and return to home
   const handleLogout = () => {
     localStorage.removeItem('token');
     setUser(null);
     window.location.href = '/';
   };
 
+  // Show loading while verifying auth
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
@@ -99,29 +108,32 @@ function App() {
         <BrowserRouter>
           <Navbar user={user} onLogout={handleLogout} onShowAuth={() => setShowAuth(true)} />
           <Routes>
+            {/* Public routes */}
             <Route path="/" element={<HomePage user={user} onShowAuth={() => setShowAuth(true)} />} />
             <Route path="/hotels" element={<HotelsPage user={user} />} />
-            <Route path="/permits" element={user ? <PermitsPage user={user} /> : <Navigate to="/" />} />
             <Route path="/map" element={<MapPage />} />
             <Route path="/safety" element={<SafetyPage />} />
             <Route path="/destinations" element={<TouristDestinationsPage />} />
             <Route path="/destinations/:id" element={<DestinationDetailPage />} />
+            
+            {/* Protected routes - requires auth */}
+            <Route path="/permits" element={user ? <PermitsPage user={user} /> : <Navigate to="/" />} />
             <Route path="/profile" element={user ? <ProfilePage user={user} /> : <Navigate to="/" />} />
             
-            {/* Admin Routes */}
+            {/* Admin routes */}
             <Route path="/admin" element={user?.role === 'admin' ? <AdminDashboard /> : <Navigate to="/" />} />
             <Route path="/admin/permits" element={user?.role === 'admin' ? <AdminPermits /> : <Navigate to="/" />} />
             <Route path="/admin/bookings" element={user?.role === 'admin' ? <AdminBookings /> : <Navigate to="/" />} />
             <Route path="/admin/permit-types" element={user?.role === 'admin' ? <AdminPermitTypes /> : <Navigate to="/" />} />
             
-            {/* Hotel Owner Routes */}
+            {/* Hotel owner routes */}
             <Route path="/hotel-owner" element={user?.role === 'hotel_owner' ? <HotelOwnerDashboard /> : <Navigate to="/" />} />
             <Route path="/hotel-owner/add-hotel" element={user?.role === 'hotel_owner' ? <AddHotelPage /> : <Navigate to="/" />} />
             <Route path="/hotel-owner/hotels" element={user?.role === 'hotel_owner' ? <ManageHotelsPage /> : <Navigate to="/" />} />
             <Route path="/hotel-owner/bookings" element={user?.role === 'hotel_owner' ? <HotelOwnerBookingsPage /> : <Navigate to="/" />} />
           </Routes>
           
-          {/* Global Components */}
+          {/* Global UI components */}
           <SOSButton />
           <Chatbot />
         </BrowserRouter>

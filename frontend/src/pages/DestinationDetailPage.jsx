@@ -1,6 +1,8 @@
+// Displays full destination details when user clicks "Learn More"
 import { useMemo } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { MapPin, Clock, Ticket, Star, ArrowLeft, ExternalLink } from 'lucide-react';
+// Importing the shared destinations data to find the specific destination by ID
 import { destinationsData } from '@/pages/TouristDestinationsPage';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
@@ -10,11 +12,13 @@ const DestinationDetailPage = () => {
   const { id } = useParams();
   const { language } = useLanguage();
 
+  // Find destination by ID from URL param
   const destination = useMemo(
     () => destinationsData.find((item) => String(item.id) === String(id)),
     [id]
   );
 
+  // Show error if destination not found
   if (!destination) {
     return (
       <div className="min-h-screen bg-slate-50 py-12 px-4">
@@ -40,6 +44,7 @@ const DestinationDetailPage = () => {
     );
   }
 
+  // Render destination detail view
   return (
     <div className="min-h-screen bg-gradient-to-b from-slate-50 to-slate-100 py-12 px-4">
       <div className="max-w-5xl mx-auto">
