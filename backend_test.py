@@ -223,30 +223,217 @@ class NepSafeAPITester:
         
         return success2  # Success means we got the expected 400
 
+    def test_email_verification(self):
+        """Test email verification flow"""
+        # Register a new user
+        test_email = f"verify_test_{datetime.now().strftime('%H%M%S')}@example.com"
+        registration_data = {
+            "name": "Verify Test User",
+            "email": test_email,
+            "password": "TestPass123!",
+            "role": "user"
+        }
+        
+        success, response = self.run_test(
+            "Registration for Verification Test",
+            "POST",
+            "api/auth/register",
+            200,
+            data=registration_data
+        )
+        
+        if not success:
+            return False
+        
+        # Test verification with invalid code (should fail)
+        verify_data = {
+            "email": test_email,
+            "code": "123456"  # Invalid code
+        }
+        
+        success, _ = self.run_test(
+            "Email Verification with Invalid Code (Should Fail)",
+            "POST",
+            "api/auth/verify-email",
+            400,
+            data=verify_data
+        )
+        
+        return success
+
+    def test_forgot_password_flow(self):
+        """Test forgot password flow"""
+        # First register a user
+        test_email = f"forgot_test_{datetime.now().strftime('%H%M%S')}@example.com"
+        registration_data = {
+            "name": "Forgot Password Test",
+            "email": test_email,
+            "password": "TestPass123!",
+            "role": "user"
+        }
+        
+        success, _ = self.run_test(
+            "Registration for Forgot Password Test",
+            "POST",
+            "api/auth/register",
+            200,
+            data=registration_data
+        )
+        
+        if not success:
+            return False
+        
+        # Test forgot password request
+        success, _ = self.run_test(
+            "Forgot Password Request",
+            "POST",
+            "api/auth/forgot-password",
+            200,
+            data={"email": test_email}
+        )
+        
+        if not success:
+            return False
+        
+        # Test reset password with invalid code (should fail)
+        reset_data = {
+            "email": test_email,
+            "code": "123456",  # Invalid code
+            "new_password": "NewPassword123!"
+        }
+        
+        success, _ = self.run_test(
+            "Reset Password with Invalid Code (Should Fail)",
+            "POST",
+            "api/auth/reset-password",
+            400,
+            data=reset_data
+        )
+        
+        return success
+
+    def test_sos_endpoint(self):
+        """Test SOS emergency endpoint"""
+        sos_data = {
+            "latitude": 27.7172,
+            "longitude": 85.3240,
+            "user_name": "Test User",
+            "user_email": "test@example.com",
+            "user_phone": "+977-1234567890",
+            "emergency_type": "medical",
+            "message": "Test emergency alert"
+        }
+        
+        success, response = self.run_test(
+            "SOS Emergency Alert",
+            "POST",
+            "api/sos",
+            200,
+            data=sos_data
+        )
+        
+        return success and 'id' in response and 'status' in response
+
+    def test_chatbot_endpoint(self):
+        """Test chatbot endpoint"""
+        chat_data = {
+            "message": "What permits do I need for Everest Base Camp?",
+            "session_id": None
+        }
+        
+        success, response = self.run_test(
+            "Chatbot Query",
+            "POST",
+            "api/chatbot",
+            200,
+            data=chat_data
+        )
+        
+        return success and 'response' in response and 'session_id' in response
+
+    def test_admin_login(self):
+        """Test admin login"""
+        admin_data = {
+            "email": "admin@nepsafe.com",
+            "password": "admin123"
+        }
+        
+        success, response = self.run_test(
+            "Admin Login",
+            "POST",
+            "api/auth/login",
+            200,
+            data=admin_data
+        )
+        
+        if success and 'token' in response:
+            self.admin_token = response['token']
+            print(f"   ✓ Admin token received: {self.admin_token[:20]}...")
+            return True
+        return False
+
+    def test_admin_stats(self):
+        """Test admin stats endpoint"""
+        if not hasattr(self, 'admin_token') or not self.admin_token:
+            self.log_test("Admin Stats (No Admin Token)", False, "Admin login required first")
+            return False
+        
+        # Temporarily store user token and use admin token
+        user_token = self.token
+        self.token = self.admin_token
+        
+        success, response = self.run_test(
+            "Admin Dashboard Stats",
+            "GET",
+            "api/admin/stats",
+            200
+        )
+        
+        # Restore user token
+        self.token = user_token
+        
+        return success and 'total_users' in response
+
     def run_all_tests(self):
-        """Run comprehensive authentication tests"""
+        """Run comprehensive API tests"""
         print("=" * 60)
-        print("🚀 Starting NepSafe Authentication API Tests")
+        print("🚀 Starting NepSafe Comprehensive API Tests")
         print("=" * 60)
         
-        # Test 1: User Registration
+        # Authentication Tests
+        print("\n📋 AUTHENTICATION TESTS")
+        print("-" * 30)
         test_email = self.test_user_registration()
         
-        # Test 2: User Login
         if test_email:
             self.test_user_login(test_email)
         
-        # Test 3: Hotel Owner Registration
         self.test_hotel_owner_registration()
-        
-        # Test 4: Invalid Login
         self.test_invalid_login()
-        
-        # Test 5: Get Current User
         self.test_get_current_user()
-        
-        # Test 6: Duplicate Registration
         self.test_duplicate_registration()
+        
+        # Email Verification Tests
+        print("\n📧 EMAIL VERIFICATION TESTS")
+        print("-" * 30)
+        self.test_email_verification()
+        
+        # Password Reset Tests
+        print("\n🔐 PASSWORD RESET TESTS")
+        print("-" * 30)
+        self.test_forgot_password_flow()
+        
+        # Emergency & Chatbot Tests
+        print("\n🚨 EMERGENCY & AI TESTS")
+        print("-" * 30)
+        self.test_sos_endpoint()
+        self.test_chatbot_endpoint()
+        
+        # Admin Tests
+        print("\n👑 ADMIN TESTS")
+        print("-" * 30)
+        self.test_admin_login()
+        self.test_admin_stats()
         
         # Print Summary
         print("\n" + "=" * 60)
