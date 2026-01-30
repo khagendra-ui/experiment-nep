@@ -1,5 +1,5 @@
-// FastAPI backend for NepSafe tourism app
-// Handles authentication, permits, hotels, destinations, and bookings
+# FastAPI backend for NepSafe tourism app
+# Handles authentication, permits, hotels, destinations, and bookings
 
 from fastapi import FastAPI, APIRouter, HTTPException, Depends, UploadFile, File, Form, status, BackgroundTasks
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
