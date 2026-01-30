@@ -10,6 +10,7 @@ class NepSafeAPITester:
     def __init__(self, base_url="https://git-repo-support.preview.emergentagent.com"):
         self.base_url = base_url
         self.token = None
+        self.admin_token = None
         self.tests_run = 0
         self.tests_passed = 0
         self.test_results = []
