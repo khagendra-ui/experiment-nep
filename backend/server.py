@@ -1725,10 +1725,7 @@ async def seed_data():
             "available_24_7": True
         }
     ]
-    # Check if emergency contacts already exist before inserting
-    existing_count = await db.emergency_contacts.count_documents({})
-    if existing_count == 0:
-        await db.emergency_contacts.insert_many(emergency_contacts)
+    await db.emergency_contacts.insert_many(emergency_contacts)
     
     # Seed Safety Tips
     safety_tips = [
@@ -1761,10 +1758,7 @@ async def seed_data():
             "importance": "medium"
         }
     ]
-    # Check if safety tips already exist before inserting
-    existing_count = await db.safety_tips.count_documents({})
-    if existing_count == 0:
-        await db.safety_tips.insert_many(safety_tips)
+    await db.safety_tips.insert_many(safety_tips)
     
     # Seed Tourist Spots
     tourist_spots = [

@@ -5,11 +5,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import { useLanguage } from '@/context/LanguageContext';
 import { Link } from 'react-router-dom';
 
-const TouristDestinationsPage = () => {
-  const { t, language } = useLanguage();
-  const [selectedCategory, setSelectedCategory] = useState('all');
-
-  const destinations = [
+export const destinationsData = [
     // National Parks
     {
       id: 1,
@@ -54,7 +50,7 @@ const TouristDestinationsPage = () => {
       permit: true,
       permitType: 'Langtang',
       difficulty: 'Moderate',
-      image: 'https://lh3.googleusercontent.com/gps-cs-s/AHVAwep-R2HhTtoxY6dTyoe_W-Pa3nPFDos8KljnuJp1EvBxlRVp_yk_M7nbTuehFVA92pzV3ZrRsHibkIB1FAqRrv_Z8QJWs8rtwmkVs4aqgxBcY_ucd-XAlt13WpL5MAi9hpnuE02l=s1360-w1360-h1020-rw',
+      image: '/images/destinations/langtang.jpg',
       description: 'Beautiful alpine scenery with rhododendron forests and Himalayan valleys.',
       attractions: 'Langtang Valley Trek, Kyanjin Gompa, Langtang Lake',
       cost: '$30-70'
@@ -70,7 +66,7 @@ const TouristDestinationsPage = () => {
       permit: true,
       permitType: 'Manaslu',
       difficulty: 'Advanced',
-      image: 'data:image/jpeg;base64,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',
+      image: '/images/destinations/manaslu.jpg',
       description: 'Remote 8th highest mountain with pristine wilderness and Tibetan culture.',
       attractions: 'Manaslu Circuit Trek, Sama Gompa, Buddhist monasteries',
       cost: '$70-150'
@@ -165,7 +161,7 @@ const TouristDestinationsPage = () => {
       permitType: 'Sagarmatha',
       difficulty: 'Moderate',
       duration: '12-14 days',
-      image: 'https://images.unsplash.com/photo-1536457265656-e0c97a01b103?w=800&q=80&crop=entropy&cs=tinysrgb',
+      image: '/images/destinations/everest bas ecamp.jpg',
       description: 'Most iconic trek leading to the base camp of Mount Everest.',
       attractions: 'Everest views, Sherpa culture, Khumbu region, Namche Bazaar',
       cost: '$1,500-2,500'
@@ -182,7 +178,7 @@ const TouristDestinationsPage = () => {
       permitType: 'Annapurna',
       difficulty: 'Moderate',
       duration: '18-21 days',
-      image: 'https://images.unsplash.com/photo-1487730116645-74489c95b41b?w=800&q=80&crop=entropy&cs=tinysrgb',
+      image: '/images/destinations/annapurna circuit trek.jpg',
       description: 'Classic circumnavigation of Annapurna massif with diverse landscapes.',
       attractions: 'Thorong La Pass, Tibetan culture, Mountain views, Local villages',
       cost: '$800-1,500'
@@ -199,7 +195,7 @@ const TouristDestinationsPage = () => {
       permitType: 'Annapurna',
       difficulty: 'Moderate',
       duration: '7-9 days',
-      image: 'https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=800&q=80&crop=entropy&cs=tinysrgb&sat=50',
+      image: '/images/destinations/annapurna camp trek.jpg',
       description: 'Shorter trek with stunning views of Annapurna peaks.',
       attractions: 'Annapurna South, Hiunchuli, Rhododendron forests, Machhapuchhare',
       cost: '$600-1,200'
@@ -216,7 +212,7 @@ const TouristDestinationsPage = () => {
       permitType: 'Annapurna',
       difficulty: 'Easy',
       duration: '4-5 days',
-      image: 'https://images.unsplash.com/photo-1495567720989-cebdbdd97913?w=800&q=80&crop=entropy&cs=tinysrgb',
+      image: '/images/destinations/poonhill.jpg',
       description: 'Beautiful short trek with sunrise views of Annapurna and Dhaulagiri.',
       attractions: 'Poon Hill sunrise, Ghorepani village, Rhododendron forests',
       cost: '$300-600'
@@ -233,7 +229,7 @@ const TouristDestinationsPage = () => {
       permitType: 'Langtang',
       difficulty: 'Easy to Moderate',
       duration: '7-8 days',
-      image: 'https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=800&q=80&crop=entropy&cs=tinysrgb&hue=100',
+      image: '/images/destinations/langtang.jpg',
       description: 'Scenic trek through beautiful alpine valleys near Kathmandu.',
       attractions: 'Langtang Valley, Kyanjin Gompa, Yak meadows, Tamang villages',
       cost: '$400-800'
@@ -359,7 +355,7 @@ const TouristDestinationsPage = () => {
       bestTime: 'Year-round',
       permit: false,
       difficulty: 'Easy',
-      image: 'https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=800&q=80&crop=entropy&cs=tinysrgb&hue=120',
+      image: '/images/destinations/zip climbing.jpg',
       description: 'Thrilling zip-line experiences.',
       attractions: 'Forest zip-lines, Canyon adventures, Valley views',
       cost: '$30-80'
@@ -374,7 +370,7 @@ const TouristDestinationsPage = () => {
       bestTime: 'October - November, February - April',
       permit: false,
       difficulty: 'Intermediate to Advanced',
-      image: 'https://images.unsplash.com/photo-1505228395891-9a51e7e86e81?w=800&q=80&crop=entropy&cs=tinysrgb',
+      image: '/images/destinations/rock climbing.jpg',
       description: 'Rock climbing on natural and artificial walls.',
       attractions: 'Crags, Indoor gyms, Guided climbs, Technical routes',
       cost: '$30-150'
@@ -389,7 +385,7 @@ const TouristDestinationsPage = () => {
       bestTime: 'October - November, February - April',
       permit: false,
       difficulty: 'Easy',
-      image: 'https://images.unsplash.com/photo-1548031013-919c6de9b2c8?w=800&q=80&crop=entropy&cs=tinysrgb',
+      image: '/images/destinations/kathmandu valley.jpg',
       description: 'UNESCO World Heritage Sites with ancient temples and cultural landmarks.',
       attractions: 'Pashupatinath Temple, Boudhanath Stupa, Swayambhunath, Durbar Square',
       cost: '$10-50'
@@ -466,12 +462,17 @@ const TouristDestinationsPage = () => {
       bestTime: 'Year-round',
       permit: false,
       difficulty: 'Easy',
-      image: 'https://images.unsplash.com/photo-1486299267070-83823f5448dd?w=800&q=80&crop=entropy&cs=tinysrgb',
+      image: '/images/destinations/kathmandu durbar square.jpg',
       description: 'UNESCO World Heritage Site with historic palaces and temples. Ancient royal square with architectural marvels.',
       attractions: 'Kumari House, Jagannath Temple, Taleju Temple, Old palaces, Ancient architecture',
       cost: 'Free (donations welcome)'
     }
   ];
+
+const TouristDestinationsPage = () => {
+  const { t, language } = useLanguage();
+  const [selectedCategory, setSelectedCategory] = useState('all');
+  const destinations = destinationsData;
 
   const categories = [
     { id: 'all', label: language === 'en' ? 'All Destinations' : 'सबै गन्तव्य' },
@@ -594,10 +595,12 @@ const TouristDestinationsPage = () => {
                     </Button>
                   </Link>
                 )}
-                <Button className="w-full bg-nepal-blue-500 hover:bg-nepal-blue-600">
-                  <ExternalLink className="h-4 w-4 mr-2" />
-                  {language === 'en' ? 'Learn More' : 'थप जानकारी'}
-                </Button>
+                <Link to={`/destinations/${destination.id}`} className="w-full">
+                  <Button className="w-full bg-nepal-blue-500 hover:bg-nepal-blue-600">
+                    <ExternalLink className="h-4 w-4 mr-2" />
+                    {language === 'en' ? 'Learn More' : 'थप जानकारी'}
+                  </Button>
+                </Link>
               </CardContent>
             </Card>
           ))}
