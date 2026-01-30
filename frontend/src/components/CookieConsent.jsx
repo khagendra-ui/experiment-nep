@@ -25,7 +25,7 @@ export default function CookieConsent() {
   if (!visible) return null;
 
   return (
-    <div className="fixed bottom-4 left-4 right-4 md:left-auto md:right-8 md:bottom-8 bg-white border shadow-lg rounded-lg p-4 z-50">
+    <div className="fixed bottom-4 left-4 right-4 md:left-4 md:right-auto md:bottom-4 md:max-w-md bg-white border shadow-lg rounded-lg p-4 z-40">
       <div className="flex flex-col md:flex-row md:items-center md:justify-between">
         <div className="mb-3 md:mb-0">
           <div className="font-semibold">We use cookies</div>
