@@ -8,6 +8,7 @@ import PermitsPage from "@/pages/PermitsPage";
 import MapPage from "@/pages/MapPage";
 import SafetyPage from "@/pages/SafetyPage";
 import ProfilePage from "@/pages/ProfilePage";
+import TouristDestinationsPage from "@/pages/TouristDestinationsPage";
 import AdminDashboard from "@/pages/AdminDashboard";
 import AdminPermits from "@/pages/AdminPermits";
 import AdminBookings from "@/pages/AdminBookings";
@@ -102,6 +103,7 @@ function App() {
             <Route path="/permits" element={user ? <PermitsPage user={user} /> : <Navigate to="/" />} />
             <Route path="/map" element={<MapPage />} />
             <Route path="/safety" element={<SafetyPage />} />
+            <Route path="/destinations" element={<TouristDestinationsPage />} />
             <Route path="/profile" element={user ? <ProfilePage user={user} /> : <Navigate to="/" />} />
             
             {/* Admin Routes */}

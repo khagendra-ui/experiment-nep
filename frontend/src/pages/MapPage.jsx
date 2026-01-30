@@ -8,6 +8,7 @@ import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { toast } from 'sonner';
+import { useLanguage } from '@/context/LanguageContext';
 
 // Import marker images
 import markerIcon2x from 'leaflet/dist/images/marker-icon-2x.png';
@@ -229,6 +230,7 @@ function MarkerCluster({ items = [], iconColor = '#10b981', popupRenderer, onIte
 }
 
 const MapPage = () => {
+    const { t } = useLanguage();
   const [hotels, setHotels] = useState([]);
   const [emergencyContacts, setEmergencyContacts] = useState([]);
   const [touristSpots, setTouristSpots] = useState([]);
@@ -447,8 +449,8 @@ const MapPage = () => {
       <div className="flex justify-center items-center h-screen bg-gradient-to-br from-blue-50 to-gray-100">
         <div className="text-center">
           <div className="animate-spin rounded-full h-20 w-20 border-b-4 border-blue-600 mx-auto mb-6"></div>
-          <p className="text-xl font-semibold text-gray-700">Loading interactive map...</p>
-          <p className="text-sm text-gray-500 mt-2">Preparing destinations for you</p>
+          <p className="text-xl font-semibold text-gray-700">{t('loadingMap')}</p>
+          <p className="text-sm text-gray-500 mt-2">{t('preparingDestinations')}</p>
         </div>
       </div>
     );
@@ -463,7 +465,7 @@ const MapPage = () => {
             <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-400 h-5 w-5" />
             <Input
               type="text"
-              placeholder="Search destinations, hotels, tourist spots, emergency services..."
+              placeholder={t('mapSearchPlaceholder')}
               value={searchQuery}
               onChange={(e) => handleSearch(e.target.value)}
               className="pl-12 h-14 text-base border-2 focus:border-blue-500 rounded-xl"
@@ -509,8 +511,8 @@ const MapPage = () => {
           <Marker position={[userLocation.lat, userLocation.lng]} icon={userIcon}>
             <Popup>
               <div className="text-center p-2">
-                <p className="font-bold text-lg mb-1">📍 You are here</p>
-                <p className="text-xs text-gray-500">Your current location</p>
+                <p className="font-bold text-lg mb-1">📍 {t('youAreHere')}</p>
+                <p className="text-xs text-gray-500">{t('yourCurrentLocation')}</p>
               </div>
             </Popup>
           </Marker>
@@ -530,14 +532,14 @@ const MapPage = () => {
                   <MapPin className="h-4 w-4 mr-1" />
                   {hotel.location}
                 </p>
-                <p className="text-blue-600 font-bold text-lg mb-3">${hotel.price_per_night}/night</p>
+                <p className="text-blue-600 font-bold text-lg mb-3">${hotel.price_per_night}/{t('night')}</p>
                 <Button
                   onClick={() => handleGetDirections({ lat: hotel.latitude, lng: hotel.longitude, name: hotel.name })}
                   size="sm"
                   className="w-full bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 h-10"
                 >
                   <Navigation className="h-4 w-4 mr-2" />
-                  Get Directions
+                  {t('getDirections')}
                 </Button>
               </div>
             </Popup>
@@ -585,6 +587,7 @@ const MapPage = () => {
                 <p className="text-sm text-gray-600 mb-2">{spot.description}</p>
                 <p className="text-sm text-yellow-600 mb-3 flex items-center">
                   ⭐ Rating: {spot.rating}/5
+                  ⭐ {t('rating')}: {spot.rating}/5
                 </p>
                 <Button
                   onClick={() => handleGetDirections({ lat: spot.latitude, lng: spot.longitude, name: spot.name })}
@@ -661,7 +664,7 @@ const MapPage = () => {
       {/* Layer Controls */}
       <Card className="absolute top-24 right-4 z-[1000] shadow-2xl">
         <div className="p-4">
-          <h3 className="font-bold mb-3 text-base text-gray-900">Map Layers</h3>
+          <h3 className="font-bold mb-3 text-base text-gray-900">{t('mapLayers')}</h3>
           <div className="space-y-3">
             <label className="flex items-center space-x-3 cursor-pointer hover:bg-gray-50 p-2 rounded-lg transition">
               <input
@@ -671,7 +674,7 @@ const MapPage = () => {
                 className="w-5 h-5 text-blue-600 rounded"
               />
               <Hotel className="h-5 w-5 text-blue-600" />
-              <span className="text-sm font-medium">Hotels</span>
+              <span className="text-sm font-medium">{t('hotels')}</span>
             </label>
             <label className="flex items-center space-x-3 cursor-pointer hover:bg-gray-50 p-2 rounded-lg transition">
               <input
@@ -681,7 +684,7 @@ const MapPage = () => {
                 className="w-5 h-5 text-red-600 rounded"
               />
               <AlertTriangle className="h-5 w-5 text-red-600" />
-              <span className="text-sm font-medium">Emergency</span>
+              <span className="text-sm font-medium">{t('emergency')}</span>
             </label>
             <label className="flex items-center space-x-3 cursor-pointer hover:bg-gray-50 p-2 rounded-lg transition">
               <input
@@ -700,7 +703,7 @@ const MapPage = () => {
                 className="w-5 h-5 text-green-600 rounded"
               />
               <MapPin className="h-5 w-5 text-green-600" />
-              <span className="text-sm font-medium">Tourist Spots</span>
+              <span className="text-sm font-medium">{t('touristSpots')}</span>
             </label>
             <label className="flex items-center space-x-3 cursor-pointer hover:bg-gray-50 p-2 rounded-lg transition">
               <input
@@ -710,7 +713,7 @@ const MapPage = () => {
                 className="w-5 h-5 text-indigo-600 rounded"
               />
               <MapPin className="h-5 w-5 text-indigo-600" />
-              <span className="text-sm font-medium">Nearby POIs (restaurants, cafes)</span>
+              <span className="text-sm font-medium">{t('nearbyPOIs')}</span>
             </label>
             <label className="flex items-center space-x-3 cursor-pointer hover:bg-gray-50 p-2 rounded-lg transition">
               <input
@@ -720,7 +723,7 @@ const MapPage = () => {
                 className="w-5 h-5 text-yellow-600 rounded"
               />
               <MapPin className="h-5 w-5 text-yellow-600" />
-              <span className="text-sm font-medium">Weather Alerts</span>
+              <span className="text-sm font-medium">{t('weatherAlerts')}</span>
             </label>
           </div>
         </div>
@@ -732,8 +735,8 @@ const MapPage = () => {
           <div className="p-6">
             <div className="flex justify-between items-start mb-4">
               <div>
-                <h3 className="font-bold text-xl text-gray-900 mb-1">🧭 Route to {selectedDestination.name}</h3>
-                <p className="text-sm text-gray-500">Follow the blue path on the map</p>
+                <h3 className="font-bold text-xl text-gray-900 mb-1">🧭 {t('routeTo')} {selectedDestination.name}</h3>
+                <p className="text-sm text-gray-500">{t('followBluePath')}</p>
               </div>
               <button onClick={clearRoute} className="text-gray-400 hover:text-gray-600 hover:bg-gray-100 p-2 rounded-full transition">
                 <X className="h-6 w-6" />
@@ -741,19 +744,19 @@ const MapPage = () => {
             </div>
             <div className="grid grid-cols-2 gap-4">
               <div className="bg-gradient-to-br from-blue-50 to-blue-100 p-5 rounded-2xl border-2 border-blue-200">
-                <p className="text-xs text-blue-700 font-semibold mb-1">DISTANCE</p>
+                <p className="text-xs text-blue-700 font-semibold mb-1">{t('distance').toUpperCase()}</p>
                 <p className="text-3xl font-bold text-blue-600">{routeInfo.distance}</p>
-                <p className="text-sm text-blue-700 mt-1">kilometers</p>
+                <p className="text-sm text-blue-700 mt-1">{t('kilometers')}</p>
               </div>
               <div className="bg-gradient-to-br from-green-50 to-green-100 p-5 rounded-2xl border-2 border-green-200">
-                <p className="text-xs text-green-700 font-semibold mb-1">EST. TIME</p>
+                <p className="text-xs text-green-700 font-semibold mb-1">{t('estTime').toUpperCase()}</p>
                 <p className="text-3xl font-bold text-green-600">{routeInfo.duration}</p>
-                <p className="text-sm text-green-700 mt-1">minutes</p>
+                <p className="text-sm text-green-700 mt-1">{t('minutes')}</p>
               </div>
             </div>
             <div className="mt-4 bg-gray-50 p-3 rounded-xl">
               <p className="text-xs text-gray-600 text-center">
-                🚗 Based on average driving speed in Nepal
+                🚗 {t('basedOnDrivingSpeed')}
               </p>
             </div>
           </div>
@@ -763,23 +766,23 @@ const MapPage = () => {
       {/* Legend */}
       <Card className="absolute bottom-6 right-4 z-[1000] shadow-2xl">
         <div className="p-4">
-          <h3 className="font-bold mb-3 text-base text-gray-900">Legend</h3>
+          <h3 className="font-bold mb-3 text-base text-gray-900">{t('legend')}</h3>
           <div className="space-y-2">
             <div className="flex items-center space-x-3">
               <div className="w-5 h-5 rounded-full bg-blue-600 border-2 border-white shadow"></div>
-              <span className="text-sm font-medium">Hotels</span>
+              <span className="text-sm font-medium">{t('hotels')}</span>
             </div>
             <div className="flex items-center space-x-3">
               <div className="w-5 h-5 rounded-full bg-red-600 border-2 border-white shadow"></div>
-              <span className="text-sm font-medium">Emergency</span>
+              <span className="text-sm font-medium">{t('emergency')}</span>
             </div>
             <div className="flex items-center space-x-3">
               <div className="w-5 h-5 rounded-full bg-green-600 border-2 border-white shadow"></div>
-              <span className="text-sm font-medium">Tourist Spots</span>
+              <span className="text-sm font-medium">{t('touristSpots')}</span>
             </div>
             <div className="flex items-center space-x-3">
               <div className="w-5 h-5 rounded-full bg-purple-600 border-2 border-white shadow"></div>
-              <span className="text-sm font-medium">Your Location</span>
+              <span className="text-sm font-medium">{t('yourLocation')}</span>
             </div>
           </div>
         </div>

@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { axiosInstance } from '@/App';
+import { useLanguage } from '@/context/LanguageContext';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -126,11 +127,15 @@ const PERMIT_DESTINATIONS = [
 ];
 
 const PermitsPage = ({ user }) => {
+  const { t } = useLanguage();
   const [permits, setPermits] = useState([]);
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [showForm, setShowForm] = useState(false);
   const [selectedDestination, setSelectedDestination] = useState(null);
+  const [showPaymentModal, setShowPaymentModal] = useState(false);
+  const [paymentMethod, setPaymentMethod] = useState('card');
+  const [currency, setCurrency] = useState('USD');
   const [formData, setFormData] = useState({
     permit_type: 'TIMS',
     full_name: '',
@@ -171,8 +176,43 @@ const PermitsPage = ({ user }) => {
     setShowForm(true);
   };
 
-  const handleSubmit = async (e) => {
+  const handleSubmit = (e) => {
     e.preventDefault();
+    setShowPaymentModal(true);
+  };
+
+  const permitFees = {
+    TIMS: 20,
+    Annapurna: 30,
+    Everest: 30,
+    Langtang: 30,
+    Manaslu: 70,
+    'Upper Mustang': 500,
+    Dolpo: 500
+  };
+
+  const currencyRates = {
+    USD: 1,
+    NPR: 133,
+    EUR: 0.92,
+    GBP: 0.79
+  };
+
+  const currencySymbols = {
+    USD: '$',
+    NPR: '₨',
+    EUR: '€',
+    GBP: '£'
+  };
+
+  const getPermitFee = () => permitFees[formData.permit_type] || 20;
+
+  const getConvertedFee = () => {
+    const rate = currencyRates[currency] || 1;
+    return getPermitFee() * rate;
+  };
+
+  const submitPermitApplication = async () => {
     setSubmitting(true);
     try {
       const formDataToSend = new FormData();
@@ -186,9 +226,11 @@ const PermitsPage = ({ user }) => {
       await axiosInstance.post('/permits', formDataToSend, {
         headers: { 'Content-Type': 'multipart/form-data' }
       });
-      
-      toast.success('Permit application submitted successfully!');
+
+      toast.success(t('paymentSuccess'));
+      toast.success(t('applicationSubmitted'));
       setShowForm(false);
+      setShowPaymentModal(false);
       setFormData({
         permit_type: 'TIMS',
         full_name: '',
@@ -201,7 +243,7 @@ const PermitsPage = ({ user }) => {
       setDocument(null);
       fetchPermits();
     } catch (error) {
-      toast.error(error.response?.data?.detail || 'Failed to submit application');
+      toast.error(error.response?.data?.detail || t('submitFailed'));
     } finally {
       setSubmitting(false);
     }
@@ -241,15 +283,15 @@ const PermitsPage = ({ user }) => {
         <div className="absolute inset-0 bg-gradient-to-t from-slate-900/90 via-slate-900/50 to-transparent" />
         <div className="absolute bottom-0 left-0 right-0 p-8 md:p-12">
           <div className="max-w-7xl mx-auto">
-            <span className="inline-flex items-center gap-2 px-3 py-1 bg-white/10 backdrop-blur-md text-white/90 rounded-full text-sm font-accent font-medium mb-4">
+            <span className="inline-flex items-center gap-2 px-4 py-2 bg-white/10 backdrop-blur-md text-white/90 rounded-full text-base font-accent font-medium mb-4">
               <FileText className="h-4 w-4" />
-              Official Permit Portal
+              {t('officialPermitPortal')}
             </span>
-            <h1 className="font-heading text-4xl md:text-5xl font-semibold text-white mb-3">
-              Trekking Permits
+            <h1 className="font-heading text-5xl md:text-6xl font-semibold text-white mb-4">
+              {t('trekPermits')}
             </h1>
-            <p className="text-lg text-white/80 max-w-2xl">
-              Apply for TIMS cards, national park entry, and restricted area permits for Nepal's most iconic destinations
+            <p className="text-xl text-white/85 max-w-3xl">
+              {t('applyPermitDescription')}
             </p>
           </div>
         </div>
@@ -260,21 +302,21 @@ const PermitsPage = ({ user }) => {
         <div className="mb-16">
           <div className="flex items-center justify-between mb-8">
             <div>
-              <span className="text-xs uppercase tracking-widest font-accent font-bold text-nepal-blue-500 mb-2 block">
-                Popular Destinations
+                <span className="text-sm uppercase tracking-widest font-accent font-bold text-nepal-blue-500 mb-3 block">
+                {t('popularDestinations')}
               </span>
-              <h2 className="font-heading text-3xl font-normal text-slate-900">
-                Destinations Requiring Permits
+                <h2 className="font-heading text-4xl font-normal text-slate-900">
+                {t('destinationsRequiringPermits')}
               </h2>
             </div>
             {!showForm && (
               <Button
                 onClick={() => setShowForm(true)}
                 data-testid="apply-permit-button"
-                className="h-12 px-6 rounded-full bg-nepal-blue-500 hover:bg-nepal-blue-600 font-semibold"
+                className="h-14 px-8 rounded-full bg-nepal-blue-500 hover:bg-nepal-blue-600 font-semibold text-base"
               >
                 <FileText className="h-4 w-4 mr-2" />
-                Apply for Permit
+                {t('applyPermit')}
               </Button>
             )}
           </div>
@@ -296,18 +338,18 @@ const PermitsPage = ({ user }) => {
                     />
                     <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent" />
                     <div className="absolute bottom-3 left-3 right-3">
-                      <span className="inline-block px-2 py-1 bg-nepal-blue-500 text-white text-xs font-medium rounded-full mb-2">
+                      <span className="inline-block px-3 py-1.5 bg-nepal-blue-500 text-white text-sm font-medium rounded-full mb-2">
                         {destination.difficulty}
                       </span>
-                      <h3 className="text-white font-semibold text-lg leading-tight">{destination.name}</h3>
+                      <h3 className="text-white font-semibold text-xl leading-tight">{destination.name}</h3>
                     </div>
                   </div>
-                  <CardContent className="p-4">
-                    <div className="flex items-center gap-1 text-sm text-slate-500 mb-3">
+                  <CardContent className="p-5">
+                    <div className="flex items-center gap-1 text-base text-slate-500 mb-3">
                       <MapPin className="h-4 w-4" />
                       <span>{destination.region}</span>
                     </div>
-                    <div className="grid grid-cols-2 gap-2 text-xs">
+                    <div className="grid grid-cols-2 gap-2 text-sm">
                       <div className="flex items-center gap-1 text-slate-600">
                         <Mountain className="h-3 w-3" />
                         <span>{destination.altitude}</span>
@@ -320,7 +362,7 @@ const PermitsPage = ({ user }) => {
                     <div className="mt-3 pt-3 border-t border-slate-100">
                       <div className="flex flex-wrap gap-1">
                         {destination.permits.slice(0, 2).map((permit, idx) => (
-                          <span key={idx} className="text-[10px] px-2 py-0.5 bg-nepal-blue-50 text-nepal-blue-600 rounded-full">
+                          <span key={idx} className="text-xs px-2.5 py-1 bg-nepal-blue-50 text-nepal-blue-600 rounded-full">
                             {permit}
                           </span>
                         ))}
@@ -337,18 +379,18 @@ const PermitsPage = ({ user }) => {
         {showForm && (
           <Card className="mb-12 rounded-2xl border border-slate-100 shadow-sm" data-testid="permit-application-form">
             <CardHeader className="border-b border-slate-100 bg-slate-50/50">
-              <CardTitle className="font-heading text-2xl">New Permit Application</CardTitle>
+              <CardTitle className="font-heading text-3xl">{t('newPermitApplication')}</CardTitle>
             </CardHeader>
             <CardContent className="p-6">
               <form onSubmit={handleSubmit} className="space-y-6">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   <div className="space-y-2">
-                    <Label className="font-semibold">Permit Type</Label>
+                    <Label className="font-semibold text-base">{t('permitType')}</Label>
                     <Select
                       value={formData.permit_type}
                       onValueChange={(value) => setFormData({ ...formData, permit_type: value })}
                     >
-                      <SelectTrigger className="h-12 rounded-xl" data-testid="permit-type-select">
+                      <SelectTrigger className="h-14 rounded-xl text-base" data-testid="permit-type-select">
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
@@ -363,82 +405,82 @@ const PermitsPage = ({ user }) => {
                     </Select>
                   </div>
                   <div className="space-y-2">
-                    <Label className="font-semibold">Full Name (as per passport)</Label>
+                    <Label className="font-semibold text-base">{t('fullNamePassport')}</Label>
                     <Input
                       data-testid="permit-fullname-input"
                       value={formData.full_name}
                       onChange={(e) => setFormData({ ...formData, full_name: e.target.value })}
-                      className="h-12 rounded-xl"
-                      placeholder="Enter your full name"
+                      className="h-14 rounded-xl text-base"
+                      placeholder={t('enterFullName')}
                       required
                     />
                   </div>
                   <div className="space-y-2">
-                    <Label className="font-semibold">Passport Number</Label>
+                    <Label className="font-semibold text-base">{t('passportNumber')}</Label>
                     <Input
                       data-testid="permit-passport-input"
                       value={formData.passport_number}
                       onChange={(e) => setFormData({ ...formData, passport_number: e.target.value })}
-                      className="h-12 rounded-xl"
-                      placeholder="e.g., AB1234567"
+                      className="h-14 rounded-xl text-base"
+                      placeholder={t('passportPlaceholder')}
                       required
                     />
                   </div>
                   <div className="space-y-2">
-                    <Label className="font-semibold">Nationality</Label>
+                    <Label className="font-semibold text-base">{t('nationality')}</Label>
                     <Input
                       data-testid="permit-nationality-input"
                       value={formData.nationality}
                       onChange={(e) => setFormData({ ...formData, nationality: e.target.value })}
-                      className="h-12 rounded-xl"
-                      placeholder="e.g., United States"
+                      className="h-14 rounded-xl text-base"
+                      placeholder={t('nationalityPlaceholder')}
                       required
                     />
                   </div>
                   <div className="space-y-2">
-                    <Label className="font-semibold">Trek Area / Destination</Label>
+                    <Label className="font-semibold text-base">{t('trekAreaDestination')}</Label>
                     <Input
                       data-testid="permit-trekarea-input"
-                      placeholder="e.g., Everest Base Camp, Annapurna Circuit"
+                      placeholder={t('trekAreaPlaceholder')}
                       value={formData.trek_area}
                       onChange={(e) => setFormData({ ...formData, trek_area: e.target.value })}
-                      className="h-12 rounded-xl"
+                      className="h-14 rounded-xl text-base"
                       required
                     />
                   </div>
                   <div className="space-y-2">
-                    <Label className="font-semibold">Start Date</Label>
+                    <Label className="font-semibold text-base">{t('startDate')}</Label>
                     <Input
                       data-testid="permit-startdate-input"
                       type="date"
                       value={formData.start_date}
                       onChange={(e) => setFormData({ ...formData, start_date: e.target.value })}
-                      className="h-12 rounded-xl"
+                      className="h-14 rounded-xl text-base"
                       min={new Date().toISOString().split('T')[0]}
                       required
                     />
                   </div>
                   <div className="space-y-2">
-                    <Label className="font-semibold">End Date</Label>
+                    <Label className="font-semibold text-base">{t('endDate')}</Label>
                     <Input
                       data-testid="permit-enddate-input"
                       type="date"
                       value={formData.end_date}
                       onChange={(e) => setFormData({ ...formData, end_date: e.target.value })}
-                      className="h-12 rounded-xl"
+                      className="h-14 rounded-xl text-base"
                       min={formData.start_date || new Date().toISOString().split('T')[0]}
                       required
                     />
                   </div>
                   <div className="space-y-2">
-                    <Label className="font-semibold">Passport Copy (Optional)</Label>
+                    <Label className="font-semibold text-base">{t('passportCopyOptional')}</Label>
                     <div className="flex items-center space-x-2">
                       <Input
                         data-testid="permit-document-input"
                         type="file"
                         accept="image/*,.pdf"
                         onChange={(e) => setDocument(e.target.files[0])}
-                        className="h-12 rounded-xl"
+                        className="h-14 rounded-xl text-base"
                       />
                       {document && <Upload className="h-5 w-5 text-emerald-600" />}
                     </div>
@@ -449,12 +491,12 @@ const PermitsPage = ({ user }) => {
                   <div className="flex items-start gap-3">
                     <AlertTriangle className="h-5 w-5 text-amber-600 flex-shrink-0 mt-0.5" />
                     <div className="text-sm text-amber-800">
-                      <p className="font-semibold mb-1">Important Information</p>
+                      <p className="font-semibold mb-1">{t('importantInformation')}</p>
                       <ul className="list-disc list-inside space-y-1 text-amber-700">
-                        <li>TIMS cards are mandatory for all trekking routes</li>
-                        <li>Restricted Area Permits require a minimum of 2 trekkers with a licensed guide</li>
-                        <li>Permit processing takes 1-3 business days</li>
-                        <li>Bring your original passport and 2 passport-sized photos for collection</li>
+                        <li>{t('timsCardsMandatory')}</li>
+                        <li>{t('restrictedAreaRequirement')}</li>
+                        <li>{t('permitProcessingTime')}</li>
+                        <li>{t('bringPassportPhotos')}</li>
                       </ul>
                     </div>
                   </div>
@@ -467,7 +509,7 @@ const PermitsPage = ({ user }) => {
                     className="h-12 px-6 rounded-full bg-nepal-blue-500 hover:bg-nepal-blue-600 font-semibold"
                     disabled={submitting}
                   >
-                    {submitting ? 'Submitting...' : 'Submit Application'}
+                    {submitting ? t('submitting') : t('proceedToPayment')}
                   </Button>
                   <Button
                     type="button"
@@ -476,7 +518,7 @@ const PermitsPage = ({ user }) => {
                     data-testid="cancel-permit-button"
                     className="h-12 px-6 rounded-full"
                   >
-                    Cancel
+                    {t('cancel')}
                   </Button>
                 </div>
               </form>
@@ -488,9 +530,9 @@ const PermitsPage = ({ user }) => {
         <div>
           <div className="mb-6">
             <span className="text-xs uppercase tracking-widest font-accent font-bold text-nepal-blue-500 mb-2 block">
-              My Applications
+              {t('myApplications')}
             </span>
-            <h2 className="font-heading text-2xl font-normal text-slate-900">Your Permit Applications</h2>
+            <h2 className="font-heading text-2xl font-normal text-slate-900">{t('yourPermitApplications')}</h2>
           </div>
           
           {loading ? (
@@ -503,12 +545,12 @@ const PermitsPage = ({ user }) => {
                 <div className="w-16 h-16 rounded-full bg-slate-100 flex items-center justify-center mx-auto mb-4">
                   <FileText className="h-8 w-8 text-slate-400" />
                 </div>
-                <p className="text-slate-500 mb-4">You haven't applied for any permits yet</p>
+                <p className="text-slate-500 mb-4">{t('noPermitsYet')}</p>
                 <Button 
                   onClick={() => setShowForm(true)}
                   className="rounded-full bg-nepal-blue-500 hover:bg-nepal-blue-600"
                 >
-                  Apply for Your First Permit
+                  {t('applyFirstPermit')}
                 </Button>
               </CardContent>
             </Card>
@@ -529,10 +571,10 @@ const PermitsPage = ({ user }) => {
                           </div>
                         </div>
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-2 text-sm text-slate-600">
-                          <p><strong>Name:</strong> {permit.full_name}</p>
-                          <p><strong>Passport:</strong> {permit.passport_number}</p>
-                          <p><strong>Nationality:</strong> {permit.nationality}</p>
-                          <p><strong>Duration:</strong> {permit.start_date} to {permit.end_date}</p>
+                          <p><strong>{t('name')}:</strong> {permit.full_name}</p>
+                          <p><strong>{t('passport')}:</strong> {permit.passport_number}</p>
+                          <p><strong>{t('nationality')}:</strong> {permit.nationality}</p>
+                          <p><strong>{t('duration')}:</strong> {permit.start_date} {t('to')} {permit.end_date}</p>
                         </div>
                       </div>
                     </div>
@@ -543,6 +585,120 @@ const PermitsPage = ({ user }) => {
           )}
         </div>
       </div>
+
+      {/* Payment Prototype Modal */}
+      <Dialog open={showPaymentModal} onOpenChange={setShowPaymentModal}>
+        <DialogContent className="sm:max-w-lg" data-testid="permit-payment-modal">
+          <DialogHeader>
+            <DialogTitle className="text-2xl font-bold">{t('payment')}</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-5 mt-2">
+            <div className="text-sm text-slate-600">
+              {t('paymentPrototypeNote')}
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label className="font-semibold">{t('paymentMethod')}</Label>
+                <Select value={paymentMethod} onValueChange={setPaymentMethod}>
+                  <SelectTrigger className="h-12">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="card">{t('cardPayment')}</SelectItem>
+                    <SelectItem value="esewa">{t('esewa')}</SelectItem>
+                    <SelectItem value="khalti">{t('khalti')}</SelectItem>
+                    <SelectItem value="paypal">{t('paypal')}</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="space-y-2">
+                <Label className="font-semibold">{t('currency')}</Label>
+                <Select value={currency} onValueChange={setCurrency}>
+                  <SelectTrigger className="h-12">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="USD">USD</SelectItem>
+                    <SelectItem value="NPR">NPR</SelectItem>
+                    <SelectItem value="EUR">EUR</SelectItem>
+                    <SelectItem value="GBP">GBP</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+
+            {paymentMethod === 'card' && (
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="space-y-2 md:col-span-2">
+                  <Label className="font-semibold">{t('cardPayment')}</Label>
+                  <Input
+                    placeholder="1234 5678 9012 3456"
+                    className="h-12"
+                    data-testid="permit-card-number-input"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label className="font-semibold">MM/YY</Label>
+                  <Input
+                    placeholder="12/28"
+                    className="h-12"
+                    data-testid="permit-card-expiry-input"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label className="font-semibold">CVV</Label>
+                  <Input
+                    placeholder="123"
+                    className="h-12"
+                    data-testid="permit-card-cvv-input"
+                  />
+                </div>
+                <div className="space-y-2 md:col-span-2">
+                  <Label className="font-semibold">Name on Card</Label>
+                  <Input
+                    placeholder="John Doe"
+                    className="h-12"
+                    data-testid="permit-card-name-input"
+                  />
+                </div>
+              </div>
+            )}
+
+            <div className="bg-slate-50 rounded-xl p-4">
+              <div className="flex items-center justify-between text-sm text-slate-600">
+                <span>{t('permitFeeLabel')}</span>
+                <span>{formData.permit_type || 'TIMS'}</span>
+              </div>
+              <div className="text-2xl font-bold text-slate-900 mt-2">
+                {currencySymbols[currency]}{getConvertedFee().toFixed(2)}
+              </div>
+            </div>
+
+            <div className="flex gap-3">
+              <Button
+                onClick={submitPermitApplication}
+                disabled={submitting}
+                className="flex-1 h-12 bg-nepal-blue-500 hover:bg-nepal-blue-600 font-semibold"
+              >
+                {submitting ? t('submitting') : t('confirmPayment')}
+              </Button>
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => {
+                  setShowPaymentModal(false);
+                  toast.info(t('paymentCancelled'));
+                }}
+                className="flex-1 h-12"
+              >
+                {t('cancelPayment')}
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
 
       {/* Destination Detail Modal */}
       <Dialog open={!!selectedDestination} onOpenChange={() => setSelectedDestination(null)}>
@@ -574,28 +730,28 @@ const PermitsPage = ({ user }) => {
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
                   <div className="text-center p-3 bg-slate-50 rounded-xl">
                     <Mountain className="h-5 w-5 mx-auto mb-1 text-nepal-blue-500" />
-                    <p className="text-xs text-slate-500">Max Altitude</p>
+                    <p className="text-xs text-slate-500">{t('maxAltitude')}</p>
                     <p className="font-semibold text-slate-900">{selectedDestination.altitude}</p>
                   </div>
                   <div className="text-center p-3 bg-slate-50 rounded-xl">
                     <Calendar className="h-5 w-5 mx-auto mb-1 text-nepal-blue-500" />
-                    <p className="text-xs text-slate-500">Duration</p>
+                    <p className="text-xs text-slate-500">{t('duration')}</p>
                     <p className="font-semibold text-slate-900">{selectedDestination.duration}</p>
                   </div>
                   <div className="text-center p-3 bg-slate-50 rounded-xl">
                     <DollarSign className="h-5 w-5 mx-auto mb-1 text-nepal-blue-500" />
-                    <p className="text-xs text-slate-500">Permit Fee</p>
+                    <p className="text-xs text-slate-500">{t('permitFee')}</p>
                     <p className="font-semibold text-slate-900 text-xs">{selectedDestination.fee}</p>
                   </div>
                   <div className="text-center p-3 bg-slate-50 rounded-xl">
                     <Clock className="h-5 w-5 mx-auto mb-1 text-nepal-blue-500" />
-                    <p className="text-xs text-slate-500">Best Season</p>
+                    <p className="text-xs text-slate-500">{t('bestSeason')}</p>
                     <p className="font-semibold text-slate-900 text-xs">{selectedDestination.bestSeason}</p>
                   </div>
                 </div>
 
                 <div className="mb-6">
-                  <h4 className="font-semibold text-slate-900 mb-2">Required Permits</h4>
+                  <h4 className="font-semibold text-slate-900 mb-2">{t('requiredPermits')}</h4>
                   <div className="flex flex-wrap gap-2">
                     {selectedDestination.permits.map((permit, idx) => (
                       <span key={idx} className="px-3 py-1 bg-nepal-blue-50 text-nepal-blue-600 rounded-full text-sm font-medium">
@@ -606,7 +762,7 @@ const PermitsPage = ({ user }) => {
                 </div>
 
                 <div className="mb-6">
-                  <h4 className="font-semibold text-slate-900 mb-2">Highlights</h4>
+                  <h4 className="font-semibold text-slate-900 mb-2">{t('highlights')}</h4>
                   <div className="flex flex-wrap gap-2">
                     {selectedDestination.highlights.map((highlight, idx) => (
                       <span key={idx} className="px-3 py-1 bg-slate-100 text-slate-600 rounded-full text-sm">
@@ -620,7 +776,7 @@ const PermitsPage = ({ user }) => {
                   onClick={() => handleApplyFromDestination(selectedDestination)}
                   className="w-full h-12 rounded-full bg-nepal-blue-500 hover:bg-nepal-blue-600 font-semibold"
                 >
-                  Apply for Permit
+                  {t('applyPermit')}
                   <ArrowRight className="ml-2 h-5 w-5" />
                 </Button>
               </div>

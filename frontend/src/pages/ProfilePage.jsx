@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { axiosInstance } from '@/App';
+import { useLanguage } from '@/context/LanguageContext';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
@@ -10,6 +11,7 @@ import { toast } from 'sonner';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 
 const ProfilePage = ({ user }) => {
+  const { t } = useLanguage();
   const [bookings, setBookings] = useState([]);
   const [permits, setPermits] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -119,30 +121,30 @@ const ProfilePage = ({ user }) => {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 py-8" data-testid="profile-page">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+    <div className="min-h-screen bg-gray-50 py-12" data-testid="profile-page">
+      <div className="max-w-7xl mx-auto px-6 sm:px-8 lg:px-10">
         {/* Profile Header */}
-        <Card className="mb-8" data-testid="profile-header">
-          <CardContent className="p-8">
+        <Card className="mb-10 shadow-lg" data-testid="profile-header">
+          <CardContent className="p-12">
             <div className="flex items-center justify-between">
-              <div className="flex items-center space-x-6">
+              <div className="flex items-center space-x-8">
                 <div className="relative">
                   {user.profile_picture ? (
                     <img 
                       src={user.profile_picture} 
                       alt={user.name}
-                      className="h-24 w-24 rounded-full object-cover border-4 border-white shadow-lg"
+                      className="h-32 w-32 rounded-full object-cover border-4 border-white shadow-xl"
                     />
                   ) : (
-                    <div className="h-24 w-24 bg-emerald-100 rounded-full flex items-center justify-center border-4 border-white shadow-lg">
-                      <User className="h-12 w-12 text-emerald-600" />
+                    <div className="h-32 w-32 bg-emerald-100 rounded-full flex items-center justify-center border-4 border-white shadow-xl">
+                      <User className="h-16 w-16 text-emerald-600" />
                     </div>
                   )}
                   <label 
                     htmlFor="profile-picture-upload" 
-                    className="absolute bottom-0 right-0 bg-blue-600 text-white p-2 rounded-full cursor-pointer hover:bg-blue-700 shadow-lg transition"
+                    className="absolute bottom-0 right-0 bg-blue-600 text-white p-3 rounded-full cursor-pointer hover:bg-blue-700 shadow-lg transition"
                   >
-                    <Camera className="h-4 w-4" />
+                    <Camera className="h-5 w-5" />
                     <input
                       id="profile-picture-upload"
                       type="file"
@@ -154,12 +156,12 @@ const ProfilePage = ({ user }) => {
                   </label>
                 </div>
                 <div>
-                  <h1 className="text-3xl font-bold text-gray-900" data-testid="profile-name">{user.name}</h1>
-                  <p className="text-gray-600" data-testid="profile-email">{user.email}</p>
-                  <p className="text-sm text-gray-500 mt-1">
+                  <h1 className="text-4xl font-bold text-gray-900" data-testid="profile-name">{user.name}</h1>
+                  <p className="text-lg text-gray-600 mt-1" data-testid="profile-email">{user.email}</p>
+                  <p className="text-base text-gray-500 mt-2">
                     Member since {new Date(user.created_at).toLocaleDateString()}
                   </p>
-                  <span className="inline-block mt-2 px-3 py-1 bg-blue-100 text-blue-700 rounded-full text-xs font-semibold capitalize">
+                  <span className="inline-block mt-3 px-4 py-2 bg-blue-100 text-blue-700 rounded-full text-sm font-semibold capitalize">
                     {user.role === 'hotel_owner' ? 'Hotel Owner' : user.role}
                   </span>
                 </div>
@@ -167,16 +169,16 @@ const ProfilePage = ({ user }) => {
               <Button
                 onClick={() => setShowEditProfile(true)}
                 variant="outline"
-                className="flex items-center space-x-2"
+                className="flex items-center space-x-2 h-12 px-6 text-base"
               >
-                <Edit2 className="h-4 w-4" />
+                <Edit2 className="h-5 w-5" />
                 <span>Edit Profile</span>
               </Button>
             </div>
             {uploading && (
-              <div className="mt-4 text-blue-600 text-sm">
+              <div className="mt-6 text-blue-600 text-base">
                 <div className="flex items-center space-x-2">
-                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-600"></div>
+                  <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-blue-600"></div>
                   <span>Uploading photo...</span>
                 </div>
               </div>
@@ -185,38 +187,38 @@ const ProfilePage = ({ user }) => {
         </Card>
 
         {/* Stats */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-          <Card data-testid="stat-card-bookings">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-8 mb-10">
+          <Card data-testid="stat-card-bookings" className="shadow-md">
             <CardHeader>
-              <CardTitle className="text-lg flex items-center space-x-2">
-                <Hotel className="h-5 w-5 text-emerald-600" />
-                <span>Total Bookings</span>
+              <CardTitle className="text-xl flex items-center space-x-2">
+                <Hotel className="h-6 w-6 text-emerald-600" />
+                <span>{t('totalBookings')}</span>
               </CardTitle>
             </CardHeader>
             <CardContent>
-              <p className="text-4xl font-bold text-gray-900">{bookings.length}</p>
+              <p className="text-5xl font-bold text-gray-900">{bookings.length}</p>
             </CardContent>
           </Card>
-          <Card data-testid="stat-card-permits">
+          <Card data-testid="stat-card-permits" className="shadow-md">
             <CardHeader>
-              <CardTitle className="text-lg flex items-center space-x-2">
-                <FileText className="h-5 w-5 text-blue-600" />
-                <span>Permit Applications</span>
+              <CardTitle className="text-xl flex items-center space-x-2">
+                <FileText className="h-6 w-6 text-blue-600" />
+                <span>{t('permitApplications')}</span>
               </CardTitle>
             </CardHeader>
             <CardContent>
-              <p className="text-4xl font-bold text-gray-900">{permits.length}</p>
+              <p className="text-5xl font-bold text-gray-900">{permits.length}</p>
             </CardContent>
           </Card>
-          <Card data-testid="stat-card-approved">
+          <Card data-testid="stat-card-approved" className="shadow-md">
             <CardHeader>
-              <CardTitle className="text-lg flex items-center space-x-2">
-                <Calendar className="h-5 w-5 text-purple-600" />
-                <span>Approved Permits</span>
+              <CardTitle className="text-xl flex items-center space-x-2">
+                <Calendar className="h-6 w-6 text-purple-600" />
+                <span>{t('approvedPermits')}</span>
               </CardTitle>
             </CardHeader>
             <CardContent>
-              <p className="text-4xl font-bold text-gray-900">
+              <p className="text-5xl font-bold text-gray-900">
                 {permits.filter(p => p.status === 'approved').length}
               </p>
             </CardContent>

@@ -9,8 +9,10 @@ import { toast } from 'sonner';
 import axios from 'axios';
 import { API } from '@/App';
 import { Lock, Mail, User, Building2, Mountain, ArrowLeft, Loader2, CheckCircle } from 'lucide-react';
+import { useLanguage } from '@/context/LanguageContext';
 
 const AuthModal = ({ open, onClose, onSuccess }) => {
+    const { t } = useLanguage();
   const [loading, setLoading] = useState(false);
   const [loginData, setLoginData] = useState({ email: '', password: '' });
   const [registerData, setRegisterData] = useState({ name: '', email: '', password: '', role: 'user' });
@@ -39,13 +41,13 @@ const AuthModal = ({ open, onClose, onSuccess }) => {
       if (response.data.verification_required) {
         setVerificationRequired(true);
         setVerificationEmail(response.data.user.email);
-        toast.info('Email verification required. Please check your email.');
+        toast.info(t('emailVerificationRequired'));
         return;
       }
-      toast.success('Welcome back!');
+      toast.success(t('welcomeBack') + '!');
       onSuccess(response.data.user);
     } catch (error) {
-      toast.error(error.response?.data?.detail || 'Login failed');
+      toast.error(error.response?.data?.detail || t('loginFailed'));
     } finally {
       setLoading(false);
     }
@@ -60,13 +62,13 @@ const AuthModal = ({ open, onClose, onSuccess }) => {
       if (response.data.verification_required) {
         setVerificationRequired(true);
         setVerificationEmail(response.data.user.email);
-        toast.info('Account created! Please verify your email.');
+        toast.info(t('accountCreated'));
         return;
       }
-      toast.success('Account created successfully!');
+      toast.success(t('accountCreatedSuccess'));
       onSuccess(response.data.user);
     } catch (error) {
-      toast.error(error.response?.data?.detail || 'Registration failed');
+      toast.error(error.response?.data?.detail || t('registrationFailed'));
     } finally {
       setLoading(false);
     }
@@ -76,7 +78,7 @@ const AuthModal = ({ open, onClose, onSuccess }) => {
     setVerifying(true);
     try {
       await axios.post(`${API}/auth/verify-email`, { email: verificationEmail, code: verificationCodeInput });
-      toast.success('Email verified!');
+      toast.success(t('emailVerified'));
       const token = localStorage.getItem('token');
       if (token) {
         const me = await axios.get(`${API}/auth/me`, { headers: { Authorization: `Bearer ${token}` } });
@@ -85,7 +87,7 @@ const AuthModal = ({ open, onClose, onSuccess }) => {
       setVerificationRequired(false);
       setVerificationCodeInput('');
     } catch (err) {
-      toast.error(err.response?.data?.detail || 'Verification failed');
+      toast.error(err.response?.data?.detail || t('verificationFailed'));
     } finally {
       setVerifying(false);
     }
@@ -95,9 +97,9 @@ const AuthModal = ({ open, onClose, onSuccess }) => {
     setResending(true);
     try {
       await axios.post(`${API}/auth/resend-verification`, { email: verificationEmail });
-      toast.success('Verification code resent');
+      toast.success(t('verificationCodeResent'));
     } catch (err) {
-      toast.error(err.response?.data?.detail || 'Resend failed');
+      toast.error(err.response?.data?.detail || t('resendFailed'));
     } finally {
       setResending(false);
     }
@@ -107,10 +109,10 @@ const AuthModal = ({ open, onClose, onSuccess }) => {
     setResetLoading(true);
     try {
       await axios.post(`${API}/auth/forgot-password`, { email: forgotEmail });
-      toast.success('Reset code sent to your email');
+      toast.success(t('resetCodeSent'));
       setForgotPasswordStep('code');
     } catch (err) {
-      toast.error(err.response?.data?.detail || 'Failed to send reset code');
+      toast.error(err.response?.data?.detail || t('failedToSendResetCode'));
     } finally {
       setResetLoading(false);
     }
@@ -124,10 +126,10 @@ const AuthModal = ({ open, onClose, onSuccess }) => {
         code: resetCode, 
         new_password: newPassword 
       });
-      toast.success('Password reset successfully!');
+      toast.success(t('passwordResetSuccess'));
       setForgotPasswordStep('success');
     } catch (err) {
-      toast.error(err.response?.data?.detail || 'Failed to reset password');
+      toast.error(err.response?.data?.detail || t('failedToResetPassword'));
     } finally {
       setResetLoading(false);
     }
@@ -157,14 +159,14 @@ const AuthModal = ({ open, onClose, onSuccess }) => {
             <Mountain className="h-7 w-7 text-white" />
           </div>
           <DialogTitle className="text-2xl font-heading font-semibold text-white">
-            {showForgotPassword ? 'Reset Password' : verificationRequired ? 'Verify Email' : 'Welcome to NepSafe'}
+            {showForgotPassword ? t('resetPassword') : verificationRequired ? t('verifyEmail') : t('welcomeToNepSafe')}
           </DialogTitle>
           <DialogDescription className="text-white/70 mt-1">
             {showForgotPassword 
-              ? 'Enter your email to receive a reset code' 
+              ? t('enterEmailForReset')
               : verificationRequired 
-                ? 'Enter the code sent to your email'
-                : 'Your journey to Nepal starts here'}
+                ? t('enterCodeSentToEmail')
+                : t('yourJourneyStartsHere')}
           </DialogDescription>
         </div>
 
@@ -175,12 +177,12 @@ const AuthModal = ({ open, onClose, onSuccess }) => {
               {forgotPasswordStep === 'email' && (
                 <>
                   <div className="space-y-2">
-                    <Label className="text-sm font-semibold">Email Address</Label>
+                    <Label className="text-sm font-semibold">{t('emailAddress')}</Label>
                     <div className="relative">
                       <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-slate-400" />
                       <Input
                         type="email"
-                        placeholder="your@email.com"
+                        placeholder={t('emailPlaceholder')}
                         value={forgotEmail}
                         onChange={(e) => setForgotEmail(e.target.value)}
                         className="pl-11 h-12 rounded-xl"
@@ -194,7 +196,7 @@ const AuthModal = ({ open, onClose, onSuccess }) => {
                     className="w-full h-12 rounded-full bg-nepal-blue-500 hover:bg-nepal-blue-600"
                     data-testid="send-reset-code-btn"
                   >
-                    {resetLoading ? <Loader2 className="h-5 w-5 animate-spin" /> : 'Send Reset Code'}
+                    {resetLoading ? <Loader2 className="h-5 w-5 animate-spin" /> : t('sendResetCode')}
                   </Button>
                 </>
               )}
@@ -202,9 +204,9 @@ const AuthModal = ({ open, onClose, onSuccess }) => {
               {forgotPasswordStep === 'code' && (
                 <>
                   <div className="space-y-2">
-                    <Label className="text-sm font-semibold">Reset Code</Label>
+                    <Label className="text-sm font-semibold">{t('resetCode')}</Label>
                     <Input
-                      placeholder="Enter 6-digit code"
+                      placeholder={t('enter6DigitCode')}
                       value={resetCode}
                       onChange={(e) => setResetCode(e.target.value)}
                       className="h-12 rounded-xl text-center text-lg tracking-widest"
@@ -213,12 +215,12 @@ const AuthModal = ({ open, onClose, onSuccess }) => {
                     />
                   </div>
                   <div className="space-y-2">
-                    <Label className="text-sm font-semibold">New Password</Label>
+                    <Label className="text-sm font-semibold">{t('newPassword')}</Label>
                     <div className="relative">
                       <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-slate-400" />
                       <Input
                         type="password"
-                        placeholder="Enter new password"
+                        placeholder={t('enterNewPassword')}
                         value={newPassword}
                         onChange={(e) => setNewPassword(e.target.value)}
                         className="pl-11 h-12 rounded-xl"
@@ -232,7 +234,7 @@ const AuthModal = ({ open, onClose, onSuccess }) => {
                     className="w-full h-12 rounded-full bg-nepal-blue-500 hover:bg-nepal-blue-600"
                     data-testid="reset-password-btn"
                   >
-                    {resetLoading ? <Loader2 className="h-5 w-5 animate-spin" /> : 'Reset Password'}
+                    {resetLoading ? <Loader2 className="h-5 w-5 animate-spin" /> : t('resetPassword')}
                   </Button>
                 </>
               )}
@@ -242,13 +244,13 @@ const AuthModal = ({ open, onClose, onSuccess }) => {
                   <div className="w-16 h-16 rounded-full bg-emerald-100 flex items-center justify-center mx-auto mb-4">
                     <CheckCircle className="h-8 w-8 text-emerald-600" />
                   </div>
-                  <h3 className="text-lg font-semibold text-slate-900 mb-2">Password Reset!</h3>
-                  <p className="text-slate-500 text-sm mb-4">You can now login with your new password.</p>
+                  <h3 className="text-lg font-semibold text-slate-900 mb-2">{t('passwordResetSuccess')}</h3>
+                  <p className="text-slate-500 text-sm mb-4">{t('youCanNowLogin')}</p>
                   <Button
                     onClick={resetForgotPassword}
                     className="w-full h-12 rounded-full bg-nepal-blue-500 hover:bg-nepal-blue-600"
                   >
-                    Back to Login
+                    {t('backToLogin')}
                   </Button>
                 </div>
               )}
@@ -259,7 +261,7 @@ const AuthModal = ({ open, onClose, onSuccess }) => {
                   className="flex items-center gap-2 text-sm text-slate-500 hover:text-nepal-blue-500 mx-auto mt-4"
                 >
                   <ArrowLeft className="h-4 w-4" />
-                  Back to Login
+                  {t('backToLogin')}
                 </button>
               )}
             </div>
@@ -267,10 +269,10 @@ const AuthModal = ({ open, onClose, onSuccess }) => {
             /* Email Verification */
             <div className="space-y-4">
               <p className="text-sm text-slate-600 text-center">
-                We sent a 6-digit code to <strong>{verificationEmail}</strong>
+                {t('weSentCodeTo')} <strong>{verificationEmail}</strong>
               </p>
               <Input
-                placeholder="Enter verification code"
+                placeholder={t('enterVerificationCode')}
                 value={verificationCodeInput}
                 onChange={(e) => setVerificationCodeInput(e.target.value)}
                 className="h-14 rounded-xl text-center text-2xl tracking-[0.5em] font-mono"
@@ -284,7 +286,7 @@ const AuthModal = ({ open, onClose, onSuccess }) => {
                   className="flex-1 h-12 rounded-full bg-nepal-blue-500 hover:bg-nepal-blue-600"
                   data-testid="verify-btn"
                 >
-                  {verifying ? <Loader2 className="h-5 w-5 animate-spin" /> : 'Verify'}
+                  {verifying ? <Loader2 className="h-5 w-5 animate-spin" /> : t('verify')}
                 </Button>
                 <Button
                   variant="outline"
@@ -293,7 +295,7 @@ const AuthModal = ({ open, onClose, onSuccess }) => {
                   className="flex-1 h-12 rounded-full"
                   data-testid="resend-btn"
                 >
-                  {resending ? <Loader2 className="h-5 w-5 animate-spin" /> : 'Resend'}
+                  {resending ? <Loader2 className="h-5 w-5 animate-spin" /> : t('resend')}
                 </Button>
               </div>
             </div>
@@ -301,19 +303,19 @@ const AuthModal = ({ open, onClose, onSuccess }) => {
             /* Login / Register Tabs */
             <Tabs defaultValue="login" className="w-full">
               <TabsList className="grid w-full grid-cols-2 h-12 rounded-xl bg-slate-100 p-1">
-                <TabsTrigger value="login" data-testid="login-tab" className="rounded-lg font-semibold">Login</TabsTrigger>
-                <TabsTrigger value="register" data-testid="register-tab" className="rounded-lg font-semibold">Sign Up</TabsTrigger>
+                <TabsTrigger value="login" data-testid="login-tab" className="rounded-lg font-semibold">{t('login')}</TabsTrigger>
+                <TabsTrigger value="register" data-testid="register-tab" className="rounded-lg font-semibold">{t('signup')}</TabsTrigger>
               </TabsList>
 
               <TabsContent value="login" data-testid="login-form">
                 <form onSubmit={handleLogin} className="space-y-4 mt-6">
                   <div className="space-y-2">
-                    <Label className="text-sm font-semibold">Email Address</Label>
+                    <Label className="text-sm font-semibold">{t('emailAddress')}</Label>
                     <div className="relative">
                       <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-slate-400" />
                       <Input
                         type="email"
-                        placeholder="your@email.com"
+                        placeholder={t('emailPlaceholder')}
                         value={loginData.email}
                         onChange={(e) => setLoginData({ ...loginData, email: e.target.value })}
                         className="pl-11 h-12 rounded-xl"
@@ -323,12 +325,12 @@ const AuthModal = ({ open, onClose, onSuccess }) => {
                     </div>
                   </div>
                   <div className="space-y-2">
-                    <Label className="text-sm font-semibold">Password</Label>
+                    <Label className="text-sm font-semibold">{t('password')}</Label>
                     <div className="relative">
                       <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-slate-400" />
                       <Input
                         type="password"
-                        placeholder="••••••••"
+                        placeholder={t('passwordPlaceholder')}
                         value={loginData.password}
                         onChange={(e) => setLoginData({ ...loginData, password: e.target.value })}
                         className="pl-11 h-12 rounded-xl"
@@ -344,7 +346,7 @@ const AuthModal = ({ open, onClose, onSuccess }) => {
                       className="text-sm text-nepal-blue-500 hover:underline"
                       data-testid="forgot-password-link"
                     >
-                      Forgot Password?
+                      {t('forgotPassword')}
                     </button>
                   </div>
                   <Button
@@ -353,7 +355,7 @@ const AuthModal = ({ open, onClose, onSuccess }) => {
                     className="w-full h-12 rounded-full bg-nepal-blue-500 hover:bg-nepal-blue-600 font-semibold"
                     data-testid="login-submit-button"
                   >
-                    {loading ? <Loader2 className="h-5 w-5 animate-spin" /> : 'Login'}
+                    {loading ? <Loader2 className="h-5 w-5 animate-spin" /> : t('login')}
                   </Button>
                 </form>
               </TabsContent>
@@ -361,11 +363,11 @@ const AuthModal = ({ open, onClose, onSuccess }) => {
               <TabsContent value="register" data-testid="register-form">
                 <form onSubmit={handleRegister} className="space-y-4 mt-6">
                   <div className="space-y-2">
-                    <Label className="text-sm font-semibold">Full Name</Label>
+                    <Label className="text-sm font-semibold">{t('fullName')}</Label>
                     <div className="relative">
                       <User className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-slate-400" />
                       <Input
-                        placeholder="John Doe"
+                        placeholder={t('fullNamePlaceholder')}
                         value={registerData.name}
                         onChange={(e) => setRegisterData({ ...registerData, name: e.target.value })}
                         className="pl-11 h-12 rounded-xl"
@@ -375,12 +377,12 @@ const AuthModal = ({ open, onClose, onSuccess }) => {
                     </div>
                   </div>
                   <div className="space-y-2">
-                    <Label className="text-sm font-semibold">Email Address</Label>
+                    <Label className="text-sm font-semibold">{t('emailAddress')}</Label>
                     <div className="relative">
                       <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-slate-400" />
                       <Input
                         type="email"
-                        placeholder="your@email.com"
+                        placeholder={t('emailPlaceholder')}
                         value={registerData.email}
                         onChange={(e) => setRegisterData({ ...registerData, email: e.target.value })}
                         className="pl-11 h-12 rounded-xl"
@@ -390,12 +392,12 @@ const AuthModal = ({ open, onClose, onSuccess }) => {
                     </div>
                   </div>
                   <div className="space-y-2">
-                    <Label className="text-sm font-semibold">Password</Label>
+                    <Label className="text-sm font-semibold">{t('password')}</Label>
                     <div className="relative">
                       <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-slate-400" />
                       <Input
                         type="password"
-                        placeholder="••••••••"
+                        placeholder={t('passwordPlaceholder')}
                         value={registerData.password}
                         onChange={(e) => setRegisterData({ ...registerData, password: e.target.value })}
                         className="pl-11 h-12 rounded-xl"
@@ -405,25 +407,25 @@ const AuthModal = ({ open, onClose, onSuccess }) => {
                     </div>
                   </div>
                   <div className="space-y-2">
-                    <Label className="text-sm font-semibold">Register As</Label>
+                    <Label className="text-sm font-semibold">{t('registerAs')}</Label>
                     <Select 
                       value={registerData.role} 
                       onValueChange={(value) => setRegisterData({ ...registerData, role: value })}
                     >
                       <SelectTrigger className="h-12 rounded-xl" data-testid="register-role-select">
-                        <SelectValue placeholder="Select role" />
+                        <SelectValue placeholder={t('selectRole')} />
                       </SelectTrigger>
                       <SelectContent>
                         <SelectItem value="user">
                           <div className="flex items-center gap-2">
                             <User className="h-4 w-4" />
-                            <span>Tourist / Traveler</span>
+                            <span>{t('touristTraveler')}</span>
                           </div>
                         </SelectItem>
                         <SelectItem value="hotel_owner">
                           <div className="flex items-center gap-2">
                             <Building2 className="h-4 w-4" />
-                            <span>Hotel Owner</span>
+                            <span>{t('hotelOwner')}</span>
                           </div>
                         </SelectItem>
                       </SelectContent>
@@ -435,7 +437,7 @@ const AuthModal = ({ open, onClose, onSuccess }) => {
                     className="w-full h-12 rounded-full bg-nepal-blue-500 hover:bg-nepal-blue-600 font-semibold"
                     data-testid="register-submit-button"
                   >
-                    {loading ? <Loader2 className="h-5 w-5 animate-spin" /> : 'Create Account'}
+                    {loading ? <Loader2 className="h-5 w-5 animate-spin" /> : t('createAccount')}
                   </Button>
                 </form>
               </TabsContent>

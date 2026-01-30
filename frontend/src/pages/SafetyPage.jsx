@@ -1,19 +1,21 @@
 import { useState, useEffect } from 'react';
 import { axiosInstance } from '@/App';
+import { useLanguage } from '@/context/LanguageContext';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Phone, AlertTriangle, Info, CheckCircle } from 'lucide-react';
 import { toast } from 'sonner';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 
 const IMPORTANT_REMINDERS = [
-  'Always carry a copy of your passport and important documents',
-  'Share your itinerary with family or friends',
-  'Get travel insurance that covers trekking and medical emergencies',
-  'Stay updated with weather forecasts and local news',
-  'Learn basic Nepali phrases for better communication',
+  'importantReminder1',
+  'importantReminder2',
+  'importantReminder3',
+  'importantReminder4',
+  'importantReminder5',
 ];
 
 const SafetyPage = () => {
+  const { t } = useLanguage();
   const [emergencyContacts, setEmergencyContacts] = useState([]);
   const [safetyTips, setSafetyTips] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -91,10 +93,10 @@ const SafetyPage = () => {
         {/* Header */}
         <div className="mb-8">
           <h1 className="text-4xl font-bold text-gray-900 mb-4" data-testid="safety-page-title">
-            Safety Information
+            {t('safetyInformation')}
           </h1>
           <p className="text-lg text-gray-600">
-            Essential contacts and tips to keep you safe during your Nepal adventure
+            {t('safetyPageSubtitle')}
           </p>
         </div>
 
@@ -102,7 +104,7 @@ const SafetyPage = () => {
         <div className="mb-12">
           <div className="flex items-center space-x-2 mb-6">
             <AlertTriangle className="h-6 w-6 text-red-600" />
-            <h2 className="text-2xl font-bold text-gray-900">Emergency Contacts</h2>
+            <h2 className="text-2xl font-bold text-gray-900">{t('emergencyContacts')}</h2>
           </div>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4" data-testid="emergency-contacts-grid">
             {uniqueEmergencyContacts.map((contact) => (
@@ -116,7 +118,7 @@ const SafetyPage = () => {
                     <div className="text-3xl mb-2">{getCategoryIcon(contact.category)}</div>
                     {contact.available_24_7 && (
                       <span className="text-xs bg-green-100 text-green-700 px-2 py-1 rounded-full">
-                        24/7
+                        {t('available247')}
                       </span>
                     )}
                   </div>
@@ -143,7 +145,7 @@ const SafetyPage = () => {
         <div>
           <div className="flex items-center space-x-2 mb-6">
             <Info className="h-6 w-6 text-blue-600" />
-            <h2 className="text-2xl font-bold text-gray-900">Safety Tips</h2>
+            <h2 className="text-2xl font-bold text-gray-900">{t('safetyTips')}</h2>
           </div>
           <Accordion type="single" collapsible className="space-y-4" data-testid="safety-tips-accordion">
             {Object.entries(groupedTips).map(([category, tips], idx) => (
@@ -156,8 +158,8 @@ const SafetyPage = () => {
                 <AccordionTrigger className="px-6 hover:no-underline">
                   <div className="flex items-center space-x-3">
                     <CheckCircle className="h-5 w-5 text-emerald-600" />
-                    <span className="text-lg font-semibold capitalize">{category} Safety</span>
-                    <span className="text-sm text-gray-500">({tips.length} tips)</span>
+                    <span className="text-lg font-semibold capitalize">{category} {t('safety')}</span>
+                    <span className="text-sm text-gray-500">({tips.length} {t('tips')})</span>
                   </div>
                 </AccordionTrigger>
                 <AccordionContent className="px-6 pb-6">
@@ -187,12 +189,12 @@ const SafetyPage = () => {
         {/* Additional Info */}
         <Card className="mt-12 bg-gradient-to-br from-emerald-50 to-blue-50 border-none">
           <CardContent className="p-8">
-            <h3 className="text-xl font-bold text-gray-900 mb-4">Important Reminders</h3>
+            <h3 className="text-xl font-bold text-gray-900 mb-4">{t('importantReminders')}</h3>
             <ul className="space-y-3 text-gray-700">
               {IMPORTANT_REMINDERS.map((reminder, idx) => (
                 <li key={idx} className="flex items-start space-x-2">
                   <CheckCircle className="h-5 w-5 text-emerald-600 mt-0.5 flex-shrink-0" />
-                  <span>{reminder}</span>
+                  <span>{t(reminder)}</span>
                 </li>
               ))}
             </ul>

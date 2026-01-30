@@ -10,29 +10,29 @@ const HomePage = ({ user, onShowAuth }) => {
   const features = [
     {
       icon: <Map className="h-7 w-7" strokeWidth={1.5} />,
-      title: t('exploreMap'),
-      description: 'Interactive maps with real-time routing, POIs, and weather overlays',
+      title: t('smartNavigation'),
+      description: t('smartNavigationDesc'),
       color: 'bg-nepal-blue-500',
       link: '/map'
     },
     {
       icon: <FileText className="h-7 w-7" strokeWidth={1.5} />,
-      title: t('getPermits'),
-      description: 'TIMS, Annapurna, Everest permits - apply online in minutes',
+      title: t('easyPermits'),
+      description: t('easyPermitsDesc'),
       color: 'bg-emerald-600',
       link: '/permits'
     },
     {
       icon: <Hotel className="h-7 w-7" strokeWidth={1.5} />,
-      title: 'Find Hotels',
-      description: 'Verified accommodations from Kathmandu to base camps',
+      title: t('premiumHotels'),
+      description: t('premiumHotelsDesc'),
       color: 'bg-nepal-gold-500',
       link: '/hotels'
     },
     {
       icon: <Shield className="h-7 w-7" strokeWidth={1.5} />,
-      title: t('stayInformed'),
-      description: 'Safety tips, emergency contacts, and travel advisories',
+      title: t('safetyFirst'),
+      description: t('safetyFirstDesc'),
       color: 'bg-nepal-red-500',
       link: '/safety'
     }
@@ -73,12 +73,12 @@ const HomePage = ({ user, onShowAuth }) => {
             </span>
             
             <h1 className="font-heading text-5xl md:text-7xl font-light text-white mb-6 leading-none tracking-tight">
-              Discover Nepal<br />
-              <span className="text-nepal-gold-500">Safely</span>
+              {t('heroTitle')}<br />
+              <span className="text-nepal-gold-500">{t('heroSubtitle')}</span>
             </h1>
             
             <p className="text-lg md:text-xl text-white/80 max-w-xl mb-10 leading-relaxed font-body">
-              Navigate the Himalayas with confidence. Real-time maps, instant permits, verified hotels, and 24/7 emergency support — all in one platform.
+              {t('heroDescription')}
             </p>
 
             <div className="flex flex-col sm:flex-row gap-4">
@@ -88,7 +88,7 @@ const HomePage = ({ user, onShowAuth }) => {
                     data-testid="explore-hotels-btn"
                     className="h-14 px-8 rounded-full bg-white text-nepal-blue-500 hover:bg-white/90 font-accent font-semibold text-base shadow-lg hover:shadow-xl hover:scale-105 transition-transform duration-200"
                   >
-                    Explore Hotels
+                    {t('exploreHotels')}
                     <ArrowRight className="ml-2 h-5 w-5" />
                   </Button>
                 </Link>
@@ -98,7 +98,7 @@ const HomePage = ({ user, onShowAuth }) => {
                   onClick={onShowAuth}
                   className="h-14 px-8 rounded-full bg-white text-nepal-blue-500 hover:bg-white/90 font-accent font-semibold text-base shadow-lg hover:shadow-xl hover:scale-105 transition-transform duration-200"
                 >
-                  Get Started Free
+                  {t('getStarted')}
                   <ArrowRight className="ml-2 h-5 w-5" />
                 </Button>
               )}
@@ -109,7 +109,7 @@ const HomePage = ({ user, onShowAuth }) => {
                   className="h-14 px-8 rounded-full bg-transparent border-2 border-white/30 text-white hover:bg-white/10 font-accent font-semibold text-base backdrop-blur-sm transition-colors duration-200"
                 >
                   <Map className="mr-2 h-5 w-5" />
-                  Explore Map
+                  {t('map')}
                 </Button>
               </Link>
             </div>
@@ -146,6 +146,24 @@ const HomePage = ({ user, onShowAuth }) => {
               </div>
             ))}
           </div>
+        </div>
+      </section>
+
+      {/* Destinations CTA Section */}
+      <section className="py-16 px-6 md:px-12 lg:px-24 bg-gradient-to-br from-emerald-50 to-blue-50 border-y border-emerald-200">
+        <div className="max-w-7xl mx-auto text-center">
+          <h2 className="font-heading text-3xl md:text-4xl font-normal text-slate-900 mb-4">
+            Explore All Destinations
+          </h2>
+          <p className="text-lg text-slate-600 mb-8 max-w-2xl mx-auto">
+            Discover Nepal's most stunning destinations, national parks, trekking routes, and adventure areas with detailed information and permit requirements.
+          </p>
+          <Link to="/destinations">
+            <Button className="h-14 px-8 rounded-full bg-emerald-600 hover:bg-emerald-700 text-white font-accent font-semibold text-base shadow-lg hover:scale-105 transition-transform duration-200">
+              <Mountain className="mr-2 h-5 w-5" />
+              Browse All Destinations
+            </Button>
+          </Link>
         </div>
       </section>
 
@@ -214,7 +232,7 @@ const HomePage = ({ user, onShowAuth }) => {
             className="h-14 px-8 rounded-full bg-white text-nepal-blue-500 hover:bg-white/90 font-accent font-semibold text-base shadow-lg hover:scale-105 transition-transform duration-200"
           >
             <MessageCircle className="mr-2 h-5 w-5" />
-            Chat with AI Assistant
+            {t('chatWithAI') || 'Chat with AI Assistant'}
           </Button>
         </div>
       </section>
@@ -239,7 +257,7 @@ const HomePage = ({ user, onShowAuth }) => {
                     data-testid="apply-permits-btn"
                     className="h-12 px-6 rounded-full bg-nepal-blue-500 hover:bg-nepal-blue-600 text-white font-accent font-semibold transition-colors duration-200"
                   >
-                    Apply for Permits
+                    {t('applyPermit')}
                   </Button>
                 </Link>
                 <Link to="/safety">
@@ -248,7 +266,7 @@ const HomePage = ({ user, onShowAuth }) => {
                     data-testid="safety-tips-btn"
                     className="h-12 px-6 rounded-full border-2 border-slate-200 hover:border-nepal-blue-500 text-slate-700 hover:text-nepal-blue-500 font-accent font-semibold transition-colors duration-200"
                   >
-                    Safety Tips
+                    {t('safetyTips')}
                   </Button>
                 </Link>
               </div>
@@ -278,12 +296,12 @@ const HomePage = ({ user, onShowAuth }) => {
               </p>
             </div>
             <div>
-              <h4 className="font-accent font-semibold text-sm uppercase tracking-wider mb-4">Explore</h4>
+              <h4 className="font-accent font-semibold text-sm uppercase tracking-wider mb-4">{t('explore') || 'Explore'}</h4>
               <ul className="space-y-2 text-slate-400 text-sm">
-                <li><Link to="/hotels" className="hover:text-white transition-colors">Hotels</Link></li>
-                <li><Link to="/permits" className="hover:text-white transition-colors">Permits</Link></li>
-                <li><Link to="/map" className="hover:text-white transition-colors">Map</Link></li>
-                <li><Link to="/safety" className="hover:text-white transition-colors">Safety</Link></li>
+                <li><Link to="/hotels" className="hover:text-white transition-colors">{t('hotels')}</Link></li>
+                <li><Link to="/permits" className="hover:text-white transition-colors">{t('permits')}</Link></li>
+                <li><Link to="/map" className="hover:text-white transition-colors">{t('map')}</Link></li>
+                <li><Link to="/safety" className="hover:text-white transition-colors">{t('safety')}</Link></li>
               </ul>
             </div>
             <div>
@@ -294,7 +312,7 @@ const HomePage = ({ user, onShowAuth }) => {
               </ul>
             </div>
             <div>
-              <h4 className="font-accent font-semibold text-sm uppercase tracking-wider mb-4">Emergency</h4>
+              <h4 className="font-accent font-semibold text-sm uppercase tracking-wider mb-4">{t('emergency')}</h4>
               <p className="text-slate-400 text-sm mb-2">Nepal Police: 100</p>
               <p className="text-slate-400 text-sm mb-2">Tourist Police: 1144</p>
               <p className="text-slate-400 text-sm">Rescue: 102</p>

@@ -1508,27 +1508,60 @@ async def update_sos_alert(alert_id: str, status: dict, admin_id: str = Depends(
 # Store conversation history in memory (for production, use a database)
 conversation_history = {}
 
+def _local_chatbot_reply(message: str) -> str:
+    """Fallback response generator when external LLM is unavailable."""
+    text = (message or "").lower()
+    if any(k in text for k in ["permit", "tims", "annapurna", "everest", "langtang", "manaslu"]):
+        return (
+            "For trekking permits in Nepal, you typically need a TIMS card and a park or restricted area permit. "
+            "Popular routes like Everest and Annapurna require national park or conservation entry permits. "
+            "Tell me your route and dates, and I can suggest the exact permits."
+        )
+    if any(k in text for k in ["hotel", "stay", "accommodation", "book"]):
+        return (
+            "You can browse verified hotels by city in the Hotels page. "
+            "Let me know your destination and budget, and I can suggest options."
+        )
+    if any(k in text for k in ["weather", "season", "best time", "visit"]):
+        return (
+            "Spring (Mar–May) and autumn (Sep–Nov) are the best seasons for most treks. "
+            "Winter is colder but clear, and monsoon brings heavy rain."
+        )
+    if any(k in text for k in ["safety", "emergency", "altitude", "sos"]):
+        return (
+            "For safety: acclimatize gradually, stay hydrated, and monitor symptoms of altitude sickness. "
+            "In emergencies, use the SOS button for immediate help."
+        )
+    if any(k in text for k in ["visa", "immigration", "entry"]):
+        return (
+            "Most travelers can get a visa on arrival at Tribhuvan International Airport. "
+            "Ensure your passport is valid for at least 6 months and carry a passport photo."
+        )
+    return (
+        "Namaste! I can help with permits, hotels, safety, weather, and travel tips in Nepal. "
+        "What would you like to know?"
+    )
+
 @api_router.post("/chatbot", response_model=ChatResponse)
 async def chat_with_bot(chat_input: ChatMessage):
-    """AI-powered travel assistant using OpenAI GPT via Emergent"""
+    """AI-powered travel assistant using OpenAI ChatGPT"""
     try:
-        from emergentintegrations.llm.chat import LlmChat, UserMessage
+        from openai import OpenAI
         
         session_id = chat_input.session_id or str(uuid.uuid4())
-        api_key = os.environ.get('EMERGENT_LLM_KEY')
+        api_key = os.environ.get('OPENAI_API_KEY')
         
         if not api_key:
-            logging.warning("EMERGENT_LLM_KEY not configured")
+            logging.warning("OPENAI_API_KEY not configured, using fallback")
             return ChatResponse(
-                response="AI Assistant is not configured. Please contact support.",
+                response=_local_chatbot_reply(chat_input.message),
                 session_id=session_id
             )
         
-        # Create chat instance with system message
-        chat = LlmChat(
-            api_key=api_key,
-            session_id=session_id,
-            system_message="""You are NepSafe AI Assistant, an expert travel guide for Nepal tourism.
+        # Initialize OpenAI client with new API
+        client = OpenAI(api_key=api_key)
+
+        system_message = """You are NepSafe AI Assistant, an expert travel guide for Nepal tourism.
 
 Your expertise includes:
 - Trekking permits (TIMS, Annapurna, Everest, Langtang, Manaslu)
@@ -1549,14 +1582,22 @@ Guidelines:
 - Suggest alternatives when appropriate
 - You can respond in English or Nepali based on the user's language
 - For emergencies, always recommend using the SOS button"""
-        ).with_model("openai", "gpt-5.2")
         
-        # Send message and get response
-        user_message = UserMessage(text=chat_input.message)
-        response = await chat.send_message(user_message)
+        # Call OpenAI API with new client
+        response = client.chat.completions.create(
+            model="gpt-3.5-turbo",
+            messages=[
+                {"role": "system", "content": system_message},
+                {"role": "user", "content": chat_input.message}
+            ],
+            temperature=0.7,
+            max_tokens=500
+        )
+        
+        bot_response = response.choices[0].message.content
         
         logging.info(f"[CHATBOT] Response generated for session {session_id}")
-        return ChatResponse(response=response, session_id=session_id)
+        return ChatResponse(response=bot_response, session_id=session_id)
         
     except Exception as e:
         logging.error(f"Chatbot error: {str(e)}")
@@ -1684,7 +1725,10 @@ async def seed_data():
             "available_24_7": True
         }
     ]
-    await db.emergency_contacts.insert_many(emergency_contacts)
+    # Check if emergency contacts already exist before inserting
+    existing_count = await db.emergency_contacts.count_documents({})
+    if existing_count == 0:
+        await db.emergency_contacts.insert_many(emergency_contacts)
     
     # Seed Safety Tips
     safety_tips = [
@@ -1717,7 +1761,10 @@ async def seed_data():
             "importance": "medium"
         }
     ]
-    await db.safety_tips.insert_many(safety_tips)
+    # Check if safety tips already exist before inserting
+    existing_count = await db.safety_tips.count_documents({})
+    if existing_count == 0:
+        await db.safety_tips.insert_many(safety_tips)
     
     # Seed Tourist Spots
     tourist_spots = [
@@ -1809,3 +1856,8 @@ logger = logging.getLogger(__name__)
 @app.on_event("shutdown")
 async def shutdown_db_client():
     client.close()
+
+# Run the server
+if __name__ == "__main__":
+    import uvicorn
+    uvicorn.run(app, host="0.0.0.0", port=8000)
