@@ -272,7 +272,7 @@ const HomePage = ({ user, onShowAuth }) => {
         <div className="max-w-7xl mx-auto">
           <div className="grid md:grid-cols-4 gap-8 mb-8">
             <div>
-              <h3 className="font-heading text-2xl font-semibold mb-4">NepSafe</h3>
+              <img src="/logo.png" alt="NepSafe" className="h-12 w-auto mb-4" />
               <p className="text-slate-400 text-sm leading-relaxed">
                 Your trusted companion for safe and memorable travel experiences in Nepal.
               </p>
