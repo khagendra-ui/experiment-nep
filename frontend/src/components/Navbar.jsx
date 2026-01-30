@@ -27,10 +27,11 @@ const Navbar = ({ user, onLogout, onShowAuth }) => {
         <div className="flex items-center justify-between h-16">
           {/* Logo */}
           <Link to="/" className="flex items-center gap-2 group" data-testid="navbar-logo">
-            <div className="w-9 h-9 rounded-xl bg-nepal-blue-500 flex items-center justify-center group-hover:scale-105 transition-transform">
-              <Mountain className="h-5 w-5 text-white" />
-            </div>
-            <span className="font-heading text-xl font-semibold text-slate-900">NepSafe</span>
+            <img 
+              src="/logo.png" 
+              alt="NepSafe Logo" 
+              className="h-10 w-auto object-contain group-hover:scale-105 transition-transform"
+            />
           </Link>
 
           {/* Desktop Navigation */}
