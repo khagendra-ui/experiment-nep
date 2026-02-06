@@ -21,6 +21,6 @@
     }
   ],
   "buildCommand": "npm run build",
-  "outputDirectory": "frontend/build",
+  "outputDirectory": "build",
   "framework": null
 }
