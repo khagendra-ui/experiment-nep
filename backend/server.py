@@ -1595,13 +1595,13 @@ Guidelines:
 @api_router.post("/seed-data")
 async def seed_data():
     # Always create admin user if not exists
-    admin_exists = await db.users.find_one({"email": "admin@nepsafe.com"})
+    admin_exists = await db.users.find_one({"email": "nepsafetourism@gmail.com"})
     if not admin_exists:
         hashed_password = bcrypt.hashpw("admin123".encode('utf-8'), bcrypt.gensalt())
         admin_user = {
             "id": str(uuid.uuid4()),
-            "email": "admin@nepsafe.com",
-            "name": "Government Admin",
+            "email": "nepsafetourism@gmail.com",
+            "name": " Admin",
             "role": "admin",
             "email_verified": True,
             "password": hashed_password.decode('utf-8'),

@@ -1,0 +1,239 @@
+@startuml NepSafe Class Diagram
+
+' User Management
+class User {
+  - id: UUID
+  - email: String
+  - password: String (hashed)
+  - name: String
+  - role: String
+  - profile_picture: String
+  - email_verified: Boolean
+  - verification_code: String
+  - business_name: String
+  - business_phone: String
+  - business_address: String
+  - created_at: DateTime
+  --
+  + register(): AuthResponse
+  + login(): AuthResponse
+  + verifyEmail(code: String): Boolean
+  + resetPassword(code: String): Boolean
+  + updateProfile(data: Object): Boolean
+}
+
+class AuthService {
+  - SECRET_KEY: String
+  - ALGORITHM: String
+  --
+  + generateToken(userId: UUID, role: String): String
+  + validateToken(token: String): Object
+  + generateVerificationCode(): String
+  + hashPassword(password: String): String
+  + checkPassword(password: String, hash: String): Boolean
+}
+
+class EmailService {
+  - smtp_host: String
+  - smtp_port: Integer
+  - smtp_user: String
+  - smtp_pass: String
+  --
+  + sendVerificationEmail(email: String, code: String): void
+  + sendPasswordResetEmail(email: String, code: String): void
+}
+
+' Hotel Management
+class Hotel {
+  - id: UUID
+  - name: String
+  - location: String
+  - city: String
+  - latitude: Float
+  - longitude: Float
+  - price_per_night: Float
+  - rating: Float
+  - description: String
+  - amenities: List<String>
+  - contact: String
+  - image_url: String
+  - images: List<String>
+  - available_rooms: Integer
+  - owner_id: UUID
+  - owner_name: String
+  - created_at: DateTime
+  --
+  + create(data: HotelCreate): Hotel
+  + update(data: HotelUpdate): Boolean
+  + uploadImages(files: List<File>): List<String>
+  + getByCity(city: String): List<Hotel>
+  + getById(id: UUID): Hotel
+}
+
+class Booking {
+  - id: UUID
+  - user_id: UUID
+  - user_name: String
+  - user_email: String
+  - hotel_id: UUID
+  - hotel_name: String
+  - check_in: Date
+  - check_out: Date
+  - guests: Integer
+  - total_price: Float
+  - status: String
+  - created_at: DateTime
+  --
+  + create(data: BookingCreate): Booking
+  + cancel(): Boolean
+  + calculatePrice(): Float
+  + getByUser(userId: UUID): List<Booking>
+  + getByHotel(hotelId: UUID): List<Booking>
+}
+
+' Permit Management
+class Permit {
+  - id: UUID
+  - user_id: UUID
+  - user_name: String
+  - user_email: String
+  - permit_type: String
+  - full_name: String
+  - passport_number: String
+  - nationality: String
+  - trek_area: String
+  - start_date: Date
+  - end_date: Date
+  - status: String
+  - admin_note: String
+  - document_data: String
+  - created_at: DateTime
+  - updated_at: DateTime
+  --
+  + create(data: PermitCreate): Permit
+  + updateStatus(status: String, note: String): Boolean
+  + cancel(): Boolean
+  + getByUser(userId: UUID): List<Permit>
+  + getPendingPermits(): List<Permit>
+}
+
+class PermitType {
+  - id: UUID
+  - name: String
+  - description: String
+  - price: Float
+  - created_at: DateTime
+  --
+  + create(data: PermitTypeCreate): PermitType
+  + getAll(): List<PermitType>
+}
+
+' Safety & Emergency
+class EmergencyContact {
+  - id: UUID
+  - name: String
+  - phone: String
+  - category: String
+  - location: String
+  - latitude: Float
+  - longitude: Float
+  - available_24_7: Boolean
+  --
+  + getAll(): List<EmergencyContact>
+  + getByCategory(category: String): List<EmergencyContact>
+}
+
+class SOSAlert {
+  - id: UUID
+  - latitude: Float
+  - longitude: Float
+  - user_name: String
+  - user_email: String
+  - user_phone: String
+  - emergency_type: String
+  - message: String
+  - status: String
+  - google_maps_link: String
+  - created_at: DateTime
+  - resolved_at: DateTime
+  --
+  + create(data: SOSRequest): SOSAlert
+  + resolve(): Boolean
+  + sendNotifications(): void
+}
+
+class SafetyTip {
+  - id: UUID
+  - title: String
+  - description: String
+  - category: String
+  - importance: String
+  --
+  + getAll(): List<SafetyTip>
+  + getByCategory(category: String): List<SafetyTip>
+}
+
+' Tourist Spots
+class TouristSpot {
+  - id: UUID
+  - name: String
+  - category: String
+  - description: String
+  - latitude: Float
+  - longitude: Float
+  - location: String
+  - rating: Float
+  - best_time_to_visit: String
+  --
+  + getAll(): List<TouristSpot>
+  + getByLocation(location: String): List<TouristSpot>
+}
+
+' External Services
+class ChatbotService {
+  - openai_api_key: String
+  --
+  + chat(message: String, sessionId: String): ChatResponse
+  + generateResponse(message: String): String
+}
+
+class WeatherService {
+  - weather_api_key: String
+  --
+  + getCurrentWeather(lat: Float, lon: Float): Object
+  + getWeatherFallback(lat: Float, lon: Float): Object
+}
+
+class MapService {
+  --
+  + getPOIs(lat: Float, lon: Float, types: String): List<Object>
+  + getTouristPOIs(bbox: String): List<Object>
+}
+
+' Relationships
+User "1" *-- "0..*" Hotel : owns
+User "1" *-- "0..*" Booking : makes
+User "1" *-- "0..*" Permit : applies
+Hotel "1" *-- "0..*" Booking : receives
+User "1" *-- "0..*" SOSAlert : creates
+
+AuthService ..> User : authenticates
+EmailService ..> User : notifies
+ChatbotService ..> User : assists
+WeatherService ..> TouristSpot : provides data
+MapService ..> TouristSpot : locates
+
+note right of User
+  Roles: user, hotel_owner, admin
+end note
+
+note right of Booking
+  Status: confirmed, cancelled
+end note
+
+note right of Permit
+  Status: pending, approved,
+  rejected, cancelled
+end note
+
+@enduml

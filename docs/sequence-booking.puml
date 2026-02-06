@@ -1,0 +1,67 @@
+@startuml Hotel Booking Sequence Diagram
+
+actor Tourist
+participant "React Frontend" as Frontend
+participant "FastAPI Backend" as Backend
+participant "JWT Auth" as Auth
+participant "MongoDB" as DB
+participant "SMTP Server" as Email
+
+== Hotel Search & Selection ==
+Tourist -> Frontend: Search hotels by city
+Frontend -> Backend: GET /api/hotels?city=Kathmandu
+Backend -> DB: Query hotels collection
+DB --> Backend: Return hotel list
+Backend --> Frontend: Hotel list (JSON)
+Frontend --> Tourist: Display hotels
+
+Tourist -> Frontend: Click hotel details
+Frontend -> Backend: GET /api/hotels/{hotel_id}
+Backend -> DB: Find hotel by ID
+DB --> Backend: Hotel details
+Backend --> Frontend: Hotel data
+Frontend --> Tourist: Show hotel details
+
+== Authentication Check ==
+Tourist -> Frontend: Click "Book Now"
+Frontend -> Frontend: Check if logged in
+alt Not Logged In
+  Frontend --> Tourist: Show login modal
+  Tourist -> Frontend: Enter credentials
+  Frontend -> Backend: POST /api/auth/login
+  Backend -> DB: Verify credentials
+  DB --> Backend: User data
+  Backend -> Auth: Generate JWT token
+  Auth --> Backend: JWT token
+  Backend --> Frontend: Auth response + token
+  Frontend -> Frontend: Store token in localStorage
+end
+
+== Make Booking ==
+Tourist -> Frontend: Fill booking form\n(dates, guests)
+Frontend -> Frontend: Calculate total price
+Frontend --> Tourist: Show booking summary
+
+Tourist -> Frontend: Confirm booking
+Frontend -> Backend: POST /api/bookings\n(with JWT token)
+Backend -> Auth: Validate JWT token
+Auth --> Backend: User ID verified
+
+Backend -> DB: Check hotel availability
+DB --> Backend: Hotel details
+
+Backend -> DB: Create booking record
+note right
+  Status: confirmed
+  Total price calculated
+  User & hotel info stored
+end note
+DB --> Backend: Booking created
+
+Backend -> DB: Update hotel availability
+DB --> Backend: Availability updated
+
+Backend --> Frontend: Booking confirmation
+Frontend --> Tourist: Show success message\n& booking details
+
+@enduml

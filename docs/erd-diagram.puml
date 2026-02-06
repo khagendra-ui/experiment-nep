@@ -1,0 +1,217 @@
+@startuml NepSafe ERD
+!define Table(name,desc) class name as "desc" << (T,#FFAAAA) >>
+!define primary_key(x) <b><color:red>PK:</color> x</b>
+!define foreign_key(x) <color:blue>FK:</color> x
+!define unique(x) <color:green>UQ:</color> x
+
+' Entities
+entity User {
+  primary_key(id: UUID)
+  unique(email: String)
+  password: String (hashed)
+  name: String
+  role: String
+  profile_picture: String
+  email_verified: Boolean
+  verification_code: String
+  business_name: String
+  business_phone: String
+  business_address: String
+  created_at: DateTime
+}
+
+entity Hotel {
+  primary_key(id: UUID)
+  name: String
+  location: String
+  city: String
+  latitude: Float
+  longitude: Float
+  price_per_night: Float
+  rating: Float
+  description: Text
+  amenities: Array[String]
+  contact: String
+  image_url: String
+  images: Array[String]
+  available_rooms: Integer
+  foreign_key(owner_id: UUID)
+  owner_name: String
+  created_at: DateTime
+}
+
+entity Booking {
+  primary_key(id: UUID)
+  foreign_key(user_id: UUID)
+  user_name: String
+  user_email: String
+  foreign_key(hotel_id: UUID)
+  hotel_name: String
+  check_in: Date
+  check_out: Date
+  guests: Integer
+  total_price: Float
+  status: String
+  created_at: DateTime
+}
+
+entity Permit {
+  primary_key(id: UUID)
+  foreign_key(user_id: UUID)
+  user_name: String
+  user_email: String
+  permit_type: String
+  full_name: String
+  passport_number: String
+  nationality: String
+  trek_area: String
+  start_date: Date
+  end_date: Date
+  status: String
+  admin_note: Text
+  document_data: String (base64)
+  created_at: DateTime
+  updated_at: DateTime
+}
+
+entity PermitType {
+  primary_key(id: UUID)
+  name: String
+  description: Text
+  price: Float
+  created_at: DateTime
+}
+
+entity EmergencyContact {
+  primary_key(id: UUID)
+  name: String
+  phone: String
+  category: String
+  location: String
+  latitude: Float
+  longitude: Float
+  available_24_7: Boolean
+}
+
+entity SafetyTip {
+  primary_key(id: UUID)
+  title: String
+  description: Text
+  category: String
+  importance: String
+}
+
+entity TouristSpot {
+  primary_key(id: UUID)
+  name: String
+  category: String
+  description: Text
+  latitude: Float
+  longitude: Float
+  location: String
+  rating: Float
+  best_time_to_visit: String
+}
+
+entity SOSAlert {
+  primary_key(id: UUID)
+  latitude: Float
+  longitude: Float
+  user_name: String
+  user_email: String
+  user_phone: String
+  emergency_type: String
+  message: Text
+  status: String
+  google_maps_link: String
+  created_at: DateTime
+  resolved_at: DateTime
+}
+
+' Relationships
+User "1" -- "0..*" Hotel : owns >
+User "1" -- "0..*" Booking : makes >
+User "1" -- "0..*" Permit : applies >
+Hotel "1" -- "0..*" Booking : has >
+User "1" -- "0..*" SOSAlert : triggers >
+
+' Admin relationships (User with role='admin')
+User "1" -- "0..*" Permit : reviews/approves >
+User "1" -- "0..*" SOSAlert : monitors/resolves >
+User "1" -- "0..*" Booking : views/monitors >
+User "1" -- "0..*" PermitType : creates/manages >
+User "1" -- "0..*" EmergencyContact : manages >
+User "1" -- "0..*" SafetyTip : manages >
+User "1" -- "0..*" TouristSpot : manages >
+User "1" -- "0..*" Hotel : approves/monitors >
+
+' Notes
+note right of User
+  Roles: user, hotel_owner, admin
+  Email verification required
+  --
+  Admin manages:
+  - Permit approvals/rejections
+  - Hotel approvals (if implemented)
+  - SOS alert monitoring
+  - All bookings oversight
+  - Permit types (CRUD)
+  - Emergency contacts (CRUD)
+  - Safety tips (CRUD)
+  - Tourist spots (CRUD)
+  - System statistics
+  - User management
+end note
+
+note right of Booking
+  Status: confirmed, cancelled
+  --
+  Admin can view all bookings
+  across all hotels
+end note
+
+note right of Permit
+  Status: pending, approved, 
+  rejected, cancelled
+  --
+  Admin reviews applications,
+  adds notes, and updates status
+end note
+
+note right of Hotel
+  Only hotel_owner role 
+  can create hotels
+  --
+  Admin can view and monitor
+  all hotels in the system
+end note
+
+note right of SOSAlert
+  Admin receives email notifications
+  and coordinates emergency response
+  --
+  Admin can update status to resolved
+end note
+
+note right of PermitType
+  Admin creates and manages
+  different permit types with
+  prices and descriptions
+end note
+
+note right of EmergencyContact
+  Admin maintains emergency
+  contact database for safety
+end note
+
+note right of SafetyTip
+  Admin curates safety tips
+  for tourists
+end note
+
+note right of TouristSpot
+  Admin manages tourist
+  destination database
+end note
+
+@enduml

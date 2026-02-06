@@ -1,0 +1,133 @@
+@startuml NepSafe Use Case Diagram
+
+left to right direction
+skinparam packageStyle rectangle
+
+actor Tourist as tourist
+actor "Hotel Owner" as owner
+actor Administrator as admin
+actor "Emergency Services" as emergency
+
+rectangle "NepSafe Tourism Platform" {
+  
+  ' Tourist Use Cases
+  package "Authentication" {
+    usecase (Register Account) as UC1
+    usecase (Login) as UC2
+    usecase (Verify Email) as UC3
+    usecase (Reset Password) as UC4
+    usecase (Update Profile) as UC5
+  }
+  
+  package "Hotel Management" {
+    usecase (Browse Hotels) as UC6
+    usecase (Search Hotels by City) as UC7
+    usecase (View Hotel Details) as UC8
+    usecase (Book Hotel Room) as UC9
+    usecase (Cancel Booking) as UC10
+    usecase (View My Bookings) as UC11
+  }
+  
+  package "Permit Management" {
+    usecase (View Permit Types) as UC12
+    usecase (Apply for Permit) as UC13
+    usecase (Upload Documents) as UC14
+    usecase (Track Permit Status) as UC15
+    usecase (Cancel Permit Application) as UC16
+  }
+  
+  package "Safety & Emergency" {
+    usecase (Send SOS Alert) as UC17
+    usecase (View Emergency Contacts) as UC18
+    usecase (View Safety Tips) as UC19
+    usecase (Check Weather) as UC20
+  }
+  
+  package "Exploration" {
+    usecase (View Tourist Destinations) as UC21
+    usecase (Search POIs on Map) as UC22
+    usecase (Chat with AI Assistant) as UC23
+    usecase (Get Travel Recommendations) as UC24
+  }
+  
+  ' Hotel Owner Use Cases
+  package "Hotel Owner Portal" {
+    usecase (Add New Hotel) as UC25
+    usecase (Update Hotel Details) as UC26
+    usecase (Upload Hotel Images) as UC27
+    usecase (View Hotel Bookings) as UC28
+    usecase (Cancel Hotel Booking) as UC29
+    usecase (View Dashboard Stats) as UC30
+  }
+  
+  ' Admin Use Cases
+  package "Admin Panel" {
+    usecase (Review Permits) as UC31
+    usecase (Approve/Reject Permits) as UC32
+    usecase (Manage Permit Types) as UC33
+    usecase (View All Bookings) as UC34
+    usecase (View All Users) as UC35
+    usecase (Monitor SOS Alerts) as UC36
+    usecase (Resolve Emergency) as UC37
+    usecase (View System Stats) as UC38
+  }
+}
+
+' Tourist relationships
+tourist --> UC1
+tourist --> UC2
+tourist --> UC3
+tourist --> UC4
+tourist --> UC5
+tourist --> UC6
+tourist --> UC7
+tourist --> UC8
+tourist --> UC9
+tourist --> UC10
+tourist --> UC11
+tourist --> UC12
+tourist --> UC13
+tourist --> UC14
+tourist --> UC15
+tourist --> UC16
+tourist --> UC17
+tourist --> UC18
+tourist --> UC19
+tourist --> UC20
+tourist --> UC21
+tourist --> UC22
+tourist --> UC23
+tourist --> UC24
+
+' Hotel Owner relationships
+owner --> UC1
+owner --> UC2
+owner --> UC25
+owner --> UC26
+owner --> UC27
+owner --> UC28
+owner --> UC29
+owner --> UC30
+
+' Admin relationships
+admin --> UC2
+admin --> UC31
+admin --> UC32
+admin --> UC33
+admin --> UC34
+admin --> UC35
+admin --> UC36
+admin --> UC37
+admin --> UC38
+
+' Emergency Services
+emergency --> UC36
+emergency --> UC37
+
+' Extensions and Includes
+UC13 ..> UC14 : <<include>>
+UC9 ..> UC8 : <<include>>
+UC17 ..> UC18 : <<extend>>
+UC32 ..> UC31 : <<include>>
+
+@enduml

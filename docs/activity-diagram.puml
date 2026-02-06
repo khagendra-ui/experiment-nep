@@ -1,0 +1,89 @@
+@startuml Hotel Booking Activity Diagram
+
+start
+
+:Tourist opens NepSafe app;
+
+:Browse available hotels;
+
+if (Logged in?) then (no)
+  :Click Login;
+  :Enter email & password;
+  :Submit login form;
+  
+  if (Credentials valid?) then (no)
+    :Show error message;
+    stop
+  else (yes)
+    :Generate JWT token;
+    :Store token in localStorage;
+  endif
+else (yes)
+endif
+
+:Search hotels by city;
+
+:View hotel list;
+
+:Select hotel;
+
+:View hotel details\n(price, amenities, location);
+
+if (Want to book?) then (no)
+  :Continue browsing;
+  stop
+else (yes)
+endif
+
+:Click "Book Now";
+
+:Select check-in date;
+:Select check-out date;
+:Enter number of guests;
+
+:System calculates\ntotal price;
+
+:Review booking summary;
+
+if (Confirm booking?) then (no)
+  :Cancel booking;
+  stop
+else (yes)
+endif
+
+:Submit booking request;
+
+partition Backend {
+  :Validate JWT token;
+  
+  if (Token valid?) then (no)
+    :Return 401 Unauthorized;
+    stop
+  else (yes)
+  endif
+  
+  :Check hotel availability;
+  
+  if (Rooms available?) then (no)
+    :Return error message;
+    stop
+  else (yes)
+  endif
+  
+  :Create booking record;
+  :Set status = "confirmed";
+  :Store in database;
+  :Update hotel availability;
+}
+
+:Return booking confirmation;
+
+:Display success message\nwith booking ID;
+
+:Show booking details;
+
+:Tourist receives\nconfirmation;
+
+stop
+
+@enduml

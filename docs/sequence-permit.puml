@@ -1,0 +1,95 @@
+@startuml Permit Application & Approval Sequence
+
+actor Tourist
+participant "React Frontend" as Frontend
+participant "FastAPI Backend" as Backend
+participant "JWT Auth" as Auth
+participant "MongoDB" as DB
+actor Admin
+participant "SMTP Server" as Email
+
+== View Permit Types ==
+Tourist -> Frontend: Navigate to Permits
+Frontend -> Backend: GET /api/permit-types
+Backend -> DB: Query permit_types collection
+DB --> Backend: Permit types list
+Backend --> Frontend: Permit types (JSON)
+Frontend --> Tourist: Display permit options
+
+== Apply for Permit ==
+Tourist -> Frontend: Select permit type\n(e.g., TIMS Card)
+Frontend --> Tourist: Show application form
+
+Tourist -> Frontend: Fill permit details\n+ upload passport photo
+Frontend -> Backend: POST /api/permits\n(multipart/form-data)
+Backend -> Auth: Validate JWT token
+Auth --> Backend: User verified
+
+Backend -> Backend: Encode document to base64
+Backend -> DB: Create permit record
+note right
+  Status: pending
+  User details stored
+  Document encoded
+end note
+DB --> Backend: Permit created
+
+Backend --> Frontend: Application submitted
+Frontend --> Tourist: Show success message\n& application ID
+
+== Admin Reviews Permit ==
+Admin -> Frontend: Login to admin panel
+Frontend -> Backend: POST /api/auth/login
+Backend -> Auth: Verify admin role
+Auth --> Backend: Admin token
+
+Admin -> Frontend: View pending permits
+Frontend -> Backend: GET /api/admin/permits
+Backend -> Auth: Validate admin token
+Auth --> Backend: Admin verified
+Backend -> DB: Query pending permits
+DB --> Backend: Permits list
+Backend --> Frontend: Permits data
+Frontend --> Admin: Display permits table
+
+Admin -> Frontend: Click permit details
+Frontend -> Backend: GET /api/admin/permits/{permit_id}
+Backend -> DB: Get permit with document
+DB --> Backend: Full permit details
+Backend --> Frontend: Permit + passport photo
+Frontend --> Admin: Show permit review page
+
+== Approve/Reject Decision ==
+alt Permit Approved
+  Admin -> Frontend: Click "Approve"
+  Frontend -> Backend: PATCH /api/admin/permits/{id}\n{status: "approved"}
+  Backend -> Auth: Verify admin token
+  Auth --> Backend: Authorized
+  Backend -> DB: Update permit status
+  DB --> Backend: Updated
+  Backend -> Email: Send approval email
+  Email -> Tourist: ✅ Permit Approved
+  Backend --> Frontend: Success
+  Frontend --> Admin: Permit approved
+else Permit Rejected
+  Admin -> Frontend: Add rejection note\n& click "Reject"
+  Frontend -> Backend: PATCH /api/admin/permits/{id}\n{status: "rejected", note: "..."}
+  Backend -> DB: Update permit status + note
+  DB --> Backend: Updated
+  Backend -> Email: Send rejection email\n(with admin note)
+  Email -> Tourist: ❌ Permit Rejected
+  Backend --> Frontend: Success
+  Frontend --> Admin: Permit rejected
+end
+
+== Tourist Checks Status ==
+Tourist -> Frontend: View my permits
+Frontend -> Backend: GET /api/permits\n(with JWT)
+Backend -> Auth: Validate token
+Auth --> Backend: User ID
+Backend -> DB: Query user's permits
+DB --> Backend: Permits list
+Backend --> Frontend: User permits
+Frontend --> Tourist: Show permit status\n(approved/rejected/pending)
+
+@enduml

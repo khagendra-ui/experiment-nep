@@ -1,0 +1,89 @@
+@startuml NepSafe Deployment Diagram
+
+node "Client Device" {
+  component [Web Browser] as browser
+  component [React Application\nPort: 3000] as react
+}
+
+node "Application Server" {
+  component [FastAPI Backend\nPort: 8000] as fastapi
+  component [JWT Authentication] as jwt
+  component [Rate Limiter] as ratelimit
+  component [CORS Middleware] as cors
+}
+
+cloud "MongoDB Atlas" {
+  database [Users DB] as usersDB
+  database [Hotels DB] as hotelsDB
+  database [Bookings DB] as bookingsDB
+  database [Permits DB] as permitsDB
+  database [Emergency DB] as emergencyDB
+  database [SOS Alerts DB] as sosDB
+}
+
+cloud "External APIs" {
+  component [OpenAI GPT API] as openai
+  component [OpenWeather API] as weather
+  component [Overpass API\n(OpenStreetMap)] as osm
+}
+
+node "Email Server" {
+  component [SMTP Server\nPort: 587] as smtp
+}
+
+node "Docker Environment" {
+  component [Docker Compose] as docker
+  component [Frontend Container] as frontend_container
+  component [Backend Container] as backend_container
+}
+
+' Connections
+browser --> react : HTTPS
+react --> fastapi : REST API\n(HTTP/HTTPS)
+
+fastapi --> jwt
+fastapi --> ratelimit
+fastapi --> cors
+
+fastapi --> usersDB : MongoDB Protocol
+fastapi --> hotelsDB
+fastapi --> bookingsDB
+fastapi --> permitsDB
+fastapi --> emergencyDB
+fastapi --> sosDB
+
+fastapi --> openai : HTTPS
+fastapi --> weather : HTTPS
+fastapi --> osm : HTTPS
+fastapi --> smtp : SMTP/TLS
+
+docker --> frontend_container
+docker --> backend_container
+frontend_container --> react
+backend_container --> fastapi
+
+note right of "MongoDB Atlas"
+  Cloud Database
+  Connection: MongoDB URI
+  Authentication: Username/Password
+end note
+
+note right of "External APIs"
+  API Key Authentication
+  Rate limited
+end note
+
+note right of docker
+  docker-compose.yml
+  Network: app-network
+  Volumes: Persistent storage
+end note
+
+note bottom of smtp
+  Email notifications:
+  - Verification codes
+  - Password resets
+  - SOS alerts
+end note
+
+@enduml

@@ -1,0 +1,115 @@
+@startuml NepSafe System Architecture
+
+!define RECTANGLE class
+
+skinparam componentStyle rectangle
+
+package "Frontend Layer" {
+  [React Web Application] as frontend
+  [Language Switcher\n(English/Nepali)] as lang
+  [UI Components\n(shadcn/ui)] as ui
+}
+
+package "API Gateway Layer" {
+  [FastAPI Backend\nREST API] as api
+  [JWT Authentication] as jwt
+  [Rate Limiting] as ratelimit
+  [CORS Middleware] as cors
+}
+
+package "Business Logic Layer" {
+  [Authentication Service] as auth
+  [Hotel Service] as hotel
+  [Booking Service] as booking
+  [Permit Service] as permit
+  [Emergency Service] as emergency
+  [Chatbot Service] as chatbot
+  [Map Service] as map
+}
+
+package "External Services" {
+  cloud "OpenAI API" as openai
+  cloud "OpenWeather API" as weather
+  cloud "Overpass API\n(OpenStreetMap)" as osm
+  cloud "SMTP Server" as smtp
+}
+
+database "MongoDB Atlas" {
+  [Users Collection] as users
+  [Hotels Collection] as hotels
+  [Bookings Collection] as bookings
+  [Permits Collection] as permits
+  [Emergency Contacts] as contacts
+  [Safety Tips] as safety
+  [Tourist Spots] as spots
+  [SOS Alerts] as sos
+  [Permit Types] as permitTypes
+}
+
+actor Tourist
+actor "Hotel Owner" as owner
+actor Admin
+actor "Emergency Services" as rescue
+
+' Frontend connections
+Tourist --> frontend
+owner --> frontend
+Admin --> frontend
+rescue --> frontend
+
+frontend --> lang
+frontend --> ui
+frontend --> api : HTTPS/REST
+
+' API Gateway
+api --> jwt
+api --> ratelimit
+api --> cors
+
+' Business Logic
+api --> auth
+api --> hotel
+api --> booking
+api --> permit
+api --> emergency
+api --> chatbot
+api --> map
+
+' Service to Database
+auth --> users
+hotel --> hotels
+booking --> bookings
+permit --> permits
+permit --> permitTypes
+emergency --> contacts
+emergency --> safety
+emergency --> sos
+map --> spots
+
+' External Services
+chatbot --> openai : AI Responses
+map --> weather : Weather Data
+map --> osm : POI Data
+auth --> smtp : Verification Emails
+permit --> smtp : Status Updates
+emergency --> smtp : SOS Alerts
+
+note right of api
+  Port: 8000
+  Security: JWT tokens
+  Rate limit: 120 req/min
+end note
+
+note right of frontend
+  Port: 3000
+  Framework: React 18
+  Styling: Tailwind CSS
+end note
+
+note bottom of "MongoDB Atlas"
+  Cloud Database
+  Auto-scaling
+  Backup enabled
+end note
+
+@enduml
