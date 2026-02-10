@@ -42,7 +42,7 @@ const AddHotelPage = () => {
       };
 
       await axiosInstance.post('/hotel-owner/hotels', hotelData);
-      toast.success('Hotel registered successfully!');
+      toast.success('Hotel submitted for approval!');
       navigate('/hotel-owner/hotels');
     } catch (error) {
       toast.error(error.response?.data?.detail || 'Failed to register hotel');

@@ -23,7 +23,7 @@ const Navbar = ({ user, onLogout, onShowAuth }) => {
   const isActive = (path) => location.pathname === path;
 
   return (
-    <nav className="sticky top-0 z-40 bg-white/95 backdrop-blur-xl border-b-2 border-slate-200 shadow-md">
+    <nav className="sticky top-0 z-40 bg-background/95 backdrop-blur-xl border-b border-border shadow-sm">
       <div className="max-w-full mx-auto px-8 lg:px-12">
         <div className="flex items-center justify-between h-28">
           {/* Logo */}
@@ -34,7 +34,7 @@ const Navbar = ({ user, onLogout, onShowAuth }) => {
               className="h-20 w-auto object-contain group-hover:scale-105 transition-transform"
             />
             <div className="flex flex-col">
-              <span className="text-4xl font-bold text-slate-900 leading-tight">NepSafe</span>
+              <span className="text-4xl font-bold text-nepal-blue-500 leading-tight">NepSafe</span>
               <span className="text-lg text-slate-600 font-medium">Your Travel Companion</span>
             </div>
           </Link>
@@ -49,7 +49,7 @@ const Navbar = ({ user, onLogout, onShowAuth }) => {
                 className={`px-7 py-3.5 rounded-xl text-xl font-semibold transition-all ${
                   isActive(link.path)
                     ? 'bg-nepal-blue-50 text-nepal-blue-600 shadow-sm'
-                    : 'text-slate-700 hover:text-nepal-blue-600 hover:bg-slate-50'
+                    : 'text-slate-700 hover:text-nepal-blue-600 hover:bg-muted'
                 }`}
               >
                 {link.label}
@@ -66,7 +66,7 @@ const Navbar = ({ user, onLogout, onShowAuth }) => {
                 <DropdownMenuTrigger asChild>
                   <Button 
                     variant="ghost" 
-                    className="flex items-center gap-3 h-14 px-4 rounded-full hover:bg-slate-100"
+                    className="flex items-center gap-3 h-14 px-4 rounded-full hover:bg-muted"
                     data-testid="user-menu-trigger"
                   >
                     <Avatar className="h-12 w-12 ring-2 ring-slate-300">
@@ -86,9 +86,9 @@ const Navbar = ({ user, onLogout, onShowAuth }) => {
                     <p className="text-base font-semibold text-slate-900">{user.name}</p>
                     <p className="text-sm text-slate-500">{user.email}</p>
                     <span className={`inline-block mt-2 text-xs px-3 py-1 rounded-full font-semibold uppercase tracking-wider ${
-                      user.role === 'admin' ? 'bg-purple-100 text-purple-700' :
+                      user.role === 'admin' ? 'bg-nepal-blue-50 text-nepal-blue-600' :
                       user.role === 'hotel_owner' ? 'bg-amber-100 text-amber-700' :
-                      'bg-slate-100 text-slate-600'
+                      'bg-muted text-slate-600'
                     }`}>
                       {user.role === 'hotel_owner' ? 'Hotel Owner' : user.role}
                     </span>
@@ -144,7 +144,7 @@ const Navbar = ({ user, onLogout, onShowAuth }) => {
             {/* Mobile Menu Button */}
             <button
               onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-              className="md:hidden p-2 rounded-lg hover:bg-slate-100"
+              className="md:hidden p-2 rounded-lg hover:bg-muted"
               aria-label="Toggle menu"
               data-testid="mobile-menu-toggle"
             >
@@ -165,7 +165,7 @@ const Navbar = ({ user, onLogout, onShowAuth }) => {
                   className={`flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-medium transition-colors ${
                     isActive(link.path)
                       ? 'bg-nepal-blue-50 text-nepal-blue-600'
-                      : 'text-slate-600 hover:bg-slate-50'
+                      : 'text-slate-600 hover:bg-muted'
                   }`}
                 >
                   {link.icon}

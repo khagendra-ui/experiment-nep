@@ -1,5 +1,5 @@
 import { Link } from 'react-router-dom';
-import { ArrowRight, Shield, Map, FileText, MessageCircle, Hotel, Phone, Mountain, Sun } from 'lucide-react';
+import { ArrowRight, Shield, Map, FileText, MessageCircle, Hotel, Phone, Mountain, Sun, Compass, ChevronDown } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { useLanguage } from '@/context/LanguageContext';
@@ -39,7 +39,7 @@ const HomePage = ({ user, onShowAuth }) => {
   ];
 
   const stats = [
-    { label: 'Tourist Destinations', value: '50+', icon: <Mountain className="h-5 w-5" /> },
+    { label: 'Tourist Destinations', value: '50+', icon: <Compass className="h-5 w-5" /> },
     { label: 'Verified Hotels', value: '100+', icon: <Hotel className="h-5 w-5" /> },
     { label: 'Permit Types', value: '10+', icon: <FileText className="h-5 w-5" /> },
     { label: 'Emergency Support', value: '24/7', icon: <Phone className="h-5 w-5" /> }
@@ -117,10 +117,9 @@ const HomePage = ({ user, onShowAuth }) => {
         </div>
 
         {/* Scroll indicator */}
-        <div className="absolute bottom-8 left-1/2 -translate-x-1/2 z-10 animate-bounce">
-          <div className="w-6 h-10 rounded-full border-2 border-white/30 flex justify-center pt-2">
-            <div className="w-1.5 h-3 bg-white/50 rounded-full" />
-          </div>
+        <div className="absolute bottom-8 left-1/2 -translate-x-1/2 z-10 flex flex-col items-center text-white/70">
+          <span className="text-xs uppercase tracking-[0.2em]">Scroll</span>
+          <ChevronDown className="mt-2 h-5 w-5 animate-bounce" />
         </div>
       </section>
 
@@ -160,7 +159,7 @@ const HomePage = ({ user, onShowAuth }) => {
           </p>
           <Link to="/destinations">
             <Button className="h-14 px-8 rounded-full bg-emerald-600 hover:bg-emerald-700 text-white font-accent font-semibold text-base shadow-lg hover:scale-105 transition-transform duration-200">
-              <Mountain className="mr-2 h-5 w-5" />
+              <Compass className="mr-2 h-5 w-5" />
               Browse All Destinations
             </Button>
           </Link>
@@ -288,7 +287,7 @@ const HomePage = ({ user, onShowAuth }) => {
       {/* Footer */}
       <footer className="py-12 px-6 md:px-12 lg:px-24 bg-slate-900 text-white">
         <div className="max-w-7xl mx-auto">
-          <div className="grid md:grid-cols-4 gap-8 mb-8">
+          <div className="grid md:grid-cols-5 gap-8 mb-8">
             <div>
               <img src="/logo.png" alt="NepSafe" className="h-12 w-auto mb-4" />
               <p className="text-slate-400 text-sm leading-relaxed">
@@ -309,6 +308,13 @@ const HomePage = ({ user, onShowAuth }) => {
               <ul className="space-y-2 text-slate-400 text-sm">
                 <li><span className="hover:text-white transition-colors cursor-pointer" onClick={handleChatbotClick}>AI Assistant</span></li>
                 <li><Link to="/safety" className="hover:text-white transition-colors">Emergency Contacts</Link></li>
+              </ul>
+            </div>
+            <div>
+              <h4 className="font-accent font-semibold text-sm uppercase tracking-wider mb-4">Legal</h4>
+              <ul className="space-y-2 text-slate-400 text-sm">
+                <li><Link to="/privacy" className="hover:text-white transition-colors">Privacy Policy</Link></li>
+                <li><Link to="/terms" className="hover:text-white transition-colors">Terms of Service</Link></li>
               </ul>
             </div>
             <div>

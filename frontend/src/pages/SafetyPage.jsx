@@ -74,10 +74,20 @@ const SafetyPage = () => {
     return acc;
   }, {});
 
-  // Deduplicate emergency contacts by ID
-  const uniqueEmergencyContacts = Array.from(
-    new Map(emergencyContacts.map((contact) => [contact.id, contact])).values()
-  );
+  // Deduplicate emergency contacts by stable fields (seeded data can be reinserted with new IDs)
+  const uniqueEmergencyContacts = (() => {
+    const seen = new Set();
+    return emergencyContacts.filter((contact) => {
+      if (!contact) return false;
+      const key = [contact.phone, contact.name, contact.category, contact.location]
+        .filter(Boolean)
+        .join('|');
+      if (!key) return true;
+      if (seen.has(key)) return false;
+      seen.add(key);
+      return true;
+    });
+  })();
 
   if (loading) {
     return (
@@ -109,7 +119,7 @@ const SafetyPage = () => {
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4" data-testid="emergency-contacts-grid">
             {uniqueEmergencyContacts.map((contact) => (
               <Card
-                key={contact.id}
+                key={contact.id || `${contact.name}-${contact.phone}-${contact.category}`}
                 data-testid={`emergency-card-${contact.id}`}
                 className="bg-white hover:shadow-lg transition card-hover border-2"
               >

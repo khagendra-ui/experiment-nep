@@ -84,10 +84,21 @@ class SimpleRateLimiterMiddleware(BaseHTTPMiddleware):
 
 # Apply middleware (order matters)
 # CORS must be added first for it to work properly
+cors_origins_env = os.environ.get('CORS_ORIGINS')
+if cors_origins_env:
+    cors_origins = [origin.strip() for origin in cors_origins_env.split(',') if origin.strip()]
+else:
+    cors_origins = ["http://localhost:3000", "http://127.0.0.1:3000"]
+
+allow_credentials = True
+if "*" in cors_origins:
+    cors_origins = ["*"]
+    allow_credentials = False
+
 app.add_middleware(
     CORSMiddleware,
-    allow_credentials=True,
-    allow_origins=os.environ.get('CORS_ORIGINS', '*').split(','),
+    allow_credentials=allow_credentials,
+    allow_origins=cors_origins,
     allow_methods=["*"],
     allow_headers=["*"],
 )
@@ -121,6 +132,11 @@ class User(BaseModel):
     role: str = "user"  # user, hotel_owner, admin
     profile_picture: Optional[str] = None
     email_verified: bool = False
+    is_active: bool = True
+    is_banned: bool = False
+    ban_reason: Optional[str] = None
+    banned_at: Optional[datetime] = None
+    deactivated_at: Optional[datetime] = None
     created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
     # Hotel owner specific fields (optional)
     business_name: Optional[str] = None
@@ -151,6 +167,10 @@ class Hotel(BaseModel):
     available_rooms: int
     owner_id: Optional[str] = None  # Link to hotel owner
     owner_name: Optional[str] = None
+    approval_status: str = "approved"  # approved, pending, rejected
+    approval_note: Optional[str] = None
+    submitted_at: Optional[datetime] = None
+    approved_at: Optional[datetime] = None
     created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
 
 class HotelCreate(BaseModel):
@@ -176,6 +196,15 @@ class HotelUpdate(BaseModel):
     amenities: Optional[List[str]] = None
     contact: Optional[str] = None
     available_rooms: Optional[int] = None
+
+class HotelApprovalUpdate(BaseModel):
+    status: str
+    admin_note: Optional[str] = None
+
+class UserStatusUpdate(BaseModel):
+    is_active: Optional[bool] = None
+    is_banned: Optional[bool] = None
+    ban_reason: Optional[str] = None
 
 # ==================== BOOKING MODELS ====================
 class Booking(BaseModel):
@@ -232,6 +261,10 @@ class PermitUpdate(BaseModel):
     status: str
     admin_note: Optional[str] = None
 
+class SosStatusUpdate(BaseModel):
+    status: str
+    admin_note: Optional[str] = None
+
 class PermitType(BaseModel):
     model_config = ConfigDict(extra="ignore")
     id: str = Field(default_factory=lambda: str(uuid.uuid4()))
@@ -270,13 +303,81 @@ class TouristSpot(BaseModel):
     model_config = ConfigDict(extra="ignore")
     id: str = Field(default_factory=lambda: str(uuid.uuid4()))
     name: str
+    name_ne: Optional[str] = None
     category: str  # temple, mountain, lake, park, etc.
     description: str
-    latitude: float
-    longitude: float
+    latitude: Optional[float] = None
+    longitude: Optional[float] = None
     location: str
-    rating: float
-    best_time_to_visit: str
+    rating: Optional[float] = None
+    best_time_to_visit: Optional[str] = None
+    region: Optional[str] = None
+    altitude: Optional[str] = None
+    permit: Optional[bool] = False
+    permit_type: Optional[str] = None
+    difficulty: Optional[str] = None
+    duration: Optional[str] = None
+    attractions: Optional[str] = None
+    cost: Optional[str] = None
+    image_url: Optional[str] = None
+
+class TouristSpotCreate(BaseModel):
+    name: str
+    name_ne: Optional[str] = None
+    category: str
+    description: str
+    latitude: Optional[float] = None
+    longitude: Optional[float] = None
+    location: str
+    rating: Optional[float] = None
+    best_time_to_visit: Optional[str] = None
+    region: Optional[str] = None
+    altitude: Optional[str] = None
+    permit: Optional[bool] = False
+    permit_type: Optional[str] = None
+    difficulty: Optional[str] = None
+    duration: Optional[str] = None
+    attractions: Optional[str] = None
+    cost: Optional[str] = None
+    image_url: Optional[str] = None
+
+class TouristSpotUpdate(BaseModel):
+    name: Optional[str] = None
+    name_ne: Optional[str] = None
+    category: Optional[str] = None
+    description: Optional[str] = None
+    latitude: Optional[float] = None
+    longitude: Optional[float] = None
+    location: Optional[str] = None
+    rating: Optional[float] = None
+    best_time_to_visit: Optional[str] = None
+    region: Optional[str] = None
+    altitude: Optional[str] = None
+    permit: Optional[bool] = None
+    permit_type: Optional[str] = None
+    difficulty: Optional[str] = None
+    duration: Optional[str] = None
+    attractions: Optional[str] = None
+    cost: Optional[str] = None
+    image_url: Optional[str] = None
+
+class TouristSpotImport(BaseModel):
+    model_config = ConfigDict(extra="ignore")
+    id: Optional[str] = None
+    name: str
+    nameNe: Optional[str] = None
+    category: Optional[str] = None
+    region: Optional[str] = None
+    altitude: Optional[str] = None
+    bestTime: Optional[str] = None
+    permit: Optional[bool] = False
+    permitType: Optional[str] = None
+    difficulty: Optional[str] = None
+    duration: Optional[str] = None
+    image: Optional[str] = None
+    description: Optional[str] = None
+    attractions: Optional[str] = None
+    cost: Optional[str] = None
 
 # ==================== CHATBOT MODELS ====================
 class ChatMessage(BaseModel):
@@ -466,6 +567,26 @@ def create_access_token(user_id: str, role: str) -> str:
     expire = datetime.now(timezone.utc) + timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
     to_encode = {"sub": user_id, "role": role, "exp": expire}
     return jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
+
+async def log_admin_action(
+    admin_id: str,
+    action: str,
+    entity_type: str,
+    entity_id: Optional[str] = None,
+    before: Optional[dict] = None,
+    after: Optional[dict] = None
+) -> None:
+    log_record = {
+        "id": str(uuid.uuid4()),
+        "admin_id": admin_id,
+        "action": action,
+        "entity_type": entity_type,
+        "entity_id": entity_id,
+        "before": before,
+        "after": after,
+        "created_at": datetime.now(timezone.utc).isoformat()
+    }
+    await db.admin_audit_logs.insert_one(log_record)
 
 async def get_current_user(credentials: HTTPAuthorizationCredentials = Depends(security)) -> dict:
     try:
@@ -693,6 +814,11 @@ async def login(user_input: UserLogin):
     if not user_doc:
         logging.error(f"[LOGIN] User not found: {user_input.email}")
         raise HTTPException(status_code=401, detail="Invalid credentials")
+
+    if user_doc.get("is_banned", False):
+        raise HTTPException(status_code=403, detail="Account banned")
+    if user_doc.get("is_active", True) is False:
+        raise HTTPException(status_code=403, detail="Account deactivated")
     
     # Check password
     stored_password = user_doc['password']
@@ -775,7 +901,12 @@ async def upload_profile_picture(
 # ==================== HOTEL ROUTES (Public) ====================
 @api_router.get("/hotels", response_model=List[Hotel])
 async def get_hotels(city: Optional[str] = None):
-    query = {}
+    query = {
+        "$or": [
+            {"approval_status": {"$exists": False}},
+            {"approval_status": "approved"}
+        ]
+    }
     if city:
         query['city'] = {"$regex": city, "$options": "i"}
     
@@ -789,6 +920,9 @@ async def get_hotels(city: Optional[str] = None):
 async def get_hotel(hotel_id: str):
     hotel = await db.hotels.find_one({"id": hotel_id}, {"_id": 0})
     if not hotel:
+        raise HTTPException(status_code=404, detail="Hotel not found")
+
+    if hotel.get("approval_status") == "pending" or hotel.get("approval_status") == "rejected":
         raise HTTPException(status_code=404, detail="Hotel not found")
     
     if isinstance(hotel['created_at'], str):
@@ -810,11 +944,17 @@ async def create_hotel(hotel_input: HotelCreate, current_user: dict = Depends(ge
         **hotel_input.model_dump(),
         rating=0.0,
         owner_id=current_user["user_id"],
-        owner_name=owner['name']
+        owner_name=owner['name'],
+        approval_status="pending",
+        submitted_at=datetime.now(timezone.utc)
     )
     
     hotel_dict = hotel.model_dump()
     hotel_dict['created_at'] = hotel_dict['created_at'].isoformat()
+    if hotel_dict.get('submitted_at'):
+        hotel_dict['submitted_at'] = hotel_dict['submitted_at'].isoformat()
+    if hotel_dict.get('approved_at'):
+        hotel_dict['approved_at'] = hotel_dict['approved_at'].isoformat()
     
     await db.hotels.insert_one(hotel_dict)
     return hotel
@@ -915,9 +1055,18 @@ async def get_owner_stats(owner_id: str = Depends(get_hotel_owner)):
     total_bookings = await db.bookings.count_documents({"hotel_id": {"$in": hotel_ids}})
     confirmed_bookings = await db.bookings.count_documents({"hotel_id": {"$in": hotel_ids}, "status": "confirmed"})
     cancelled_bookings = await db.bookings.count_documents({"hotel_id": {"$in": hotel_ids}, "status": "cancelled"})
+    pending_hotels = await db.hotels.count_documents({"owner_id": owner_id, "approval_status": "pending"})
+    approved_hotels = await db.hotels.count_documents({
+        "owner_id": owner_id,
+        "$or": [{"approval_status": "approved"}, {"approval_status": {"$exists": False}}]
+    })
+    rejected_hotels = await db.hotels.count_documents({"owner_id": owner_id, "approval_status": "rejected"})
     
     return {
         "total_hotels": total_hotels,
+        "approved_hotels": approved_hotels,
+        "pending_hotels": pending_hotels,
+        "rejected_hotels": rejected_hotels,
         "total_bookings": total_bookings,
         "confirmed_bookings": confirmed_bookings,
         "cancelled_bookings": cancelled_bookings
@@ -1078,11 +1227,23 @@ async def admin_update_permit(permit_id: str, update: PermitUpdate, admin_id: st
     if not permit:
         raise HTTPException(status_code=404, detail="Permit not found")
     
+    before = {
+        "status": permit.get("status"),
+        "admin_note": permit.get("admin_note")
+    }
     update_data = {"status": update.status, "updated_at": datetime.now(timezone.utc).isoformat()}
     if update.admin_note:
         update_data["admin_note"] = update.admin_note
     
     await db.permits.update_one({"id": permit_id}, {"$set": update_data})
+    await log_admin_action(
+        admin_id=admin_id,
+        action="permit_status_update",
+        entity_type="permit",
+        entity_id=permit_id,
+        before=before,
+        after=update_data
+    )
     return {"message": "Permit updated successfully"}
 
 @api_router.get("/admin/bookings", response_model=List[Booking])
@@ -1099,6 +1260,61 @@ async def admin_get_users(admin_id: str = Depends(get_admin_user)):
     users = await db.users.find({}, {"_id": 0, "password": 0, "verification_code": 0}).sort("created_at", -1).to_list(1000)
     return users
 
+@api_router.patch("/admin/users/{user_id}/status")
+async def admin_update_user_status(user_id: str, update: UserStatusUpdate, admin_id: str = Depends(get_admin_user)):
+    user_doc = await db.users.find_one({"id": user_id})
+    if not user_doc:
+        raise HTTPException(status_code=404, detail="User not found")
+
+    update_data = {}
+    unset_data = {}
+
+    if update.is_active is not None:
+        update_data["is_active"] = update.is_active
+        if update.is_active is False:
+            update_data["deactivated_at"] = datetime.now(timezone.utc).isoformat()
+        else:
+            unset_data["deactivated_at"] = ""
+
+    if update.is_banned is not None:
+        update_data["is_banned"] = update.is_banned
+        if update.is_banned:
+            update_data["banned_at"] = datetime.now(timezone.utc).isoformat()
+            if update.ban_reason:
+                update_data["ban_reason"] = update.ban_reason
+        else:
+            unset_data["banned_at"] = ""
+            unset_data["ban_reason"] = ""
+
+    if update.ban_reason and update.is_banned:
+        update_data["ban_reason"] = update.ban_reason
+
+    if not update_data and not unset_data:
+        raise HTTPException(status_code=400, detail="No valid updates provided")
+
+    before = {
+        "is_active": user_doc.get("is_active", True),
+        "is_banned": user_doc.get("is_banned", False),
+        "ban_reason": user_doc.get("ban_reason")
+    }
+
+    update_ops = {}
+    if update_data:
+        update_ops["$set"] = update_data
+    if unset_data:
+        update_ops["$unset"] = unset_data
+
+    await db.users.update_one({"id": user_id}, update_ops)
+    await log_admin_action(
+        admin_id=admin_id,
+        action="user_status_update",
+        entity_type="user",
+        entity_id=user_id,
+        before=before,
+        after=update_data
+    )
+    return {"message": "User status updated"}
+
 @api_router.get("/admin/stats")
 async def admin_get_stats(admin_id: str = Depends(get_admin_user)):
     total_users = await db.users.count_documents({"role": "user"})
@@ -1111,10 +1327,18 @@ async def admin_get_stats(admin_id: str = Depends(get_admin_user)):
     cancelled_bookings = await db.bookings.count_documents({"status": "cancelled"})
     confirmed_bookings = await db.bookings.count_documents({"status": "confirmed"})
     total_hotels = await db.hotels.count_documents({})
+    pending_hotels = await db.hotels.count_documents({"approval_status": "pending"})
+    approved_hotels = await db.hotels.count_documents({
+        "$or": [{"approval_status": "approved"}, {"approval_status": {"$exists": False}}]
+    })
+    rejected_hotels = await db.hotels.count_documents({"approval_status": "rejected"})
+    banned_users = await db.users.count_documents({"is_banned": True})
+    total_tourist_spots = await db.tourist_spots.count_documents({})
     
     return {
         "total_users": total_users,
         "total_hotel_owners": total_hotel_owners,
+        "banned_users": banned_users,
         "total_bookings": total_bookings,
         "confirmed_bookings": confirmed_bookings,
         "total_permits": total_permits,
@@ -1122,8 +1346,63 @@ async def admin_get_stats(admin_id: str = Depends(get_admin_user)):
         "approved_permits": approved_permits,
         "rejected_permits": rejected_permits,
         "cancelled_bookings": cancelled_bookings,
-        "total_hotels": total_hotels
+        "total_hotels": total_hotels,
+        "pending_hotels": pending_hotels,
+        "approved_hotels": approved_hotels,
+        "rejected_hotels": rejected_hotels,
+        "total_tourist_spots": total_tourist_spots
     }
+
+@api_router.get("/admin/audit-logs")
+async def admin_get_audit_logs(limit: int = 200, admin_id: str = Depends(get_admin_user)):
+    logs = await db.admin_audit_logs.find({}, {"_id": 0}).sort("created_at", -1).to_list(limit)
+    return logs
+
+@api_router.get("/admin/hotels")
+async def admin_get_hotels(status: Optional[str] = None, admin_id: str = Depends(get_admin_user)):
+    query = {}
+    if status:
+        if status == "approved":
+            query = {"$or": [{"approval_status": "approved"}, {"approval_status": {"$exists": False}}]}
+        else:
+            query = {"approval_status": status}
+
+    hotels = await db.hotels.find(query, {"_id": 0}).sort("created_at", -1).to_list(1000)
+    for hotel in hotels:
+        if isinstance(hotel.get('created_at'), str):
+            hotel['created_at'] = datetime.fromisoformat(hotel['created_at'])
+    return hotels
+
+@api_router.patch("/admin/hotels/{hotel_id}/approval")
+async def admin_update_hotel_approval(hotel_id: str, update: HotelApprovalUpdate, admin_id: str = Depends(get_admin_user)):
+    hotel = await db.hotels.find_one({"id": hotel_id})
+    if not hotel:
+        raise HTTPException(status_code=404, detail="Hotel not found")
+
+    if update.status not in ["approved", "pending", "rejected"]:
+        raise HTTPException(status_code=400, detail="Invalid status")
+
+    before = {
+        "approval_status": hotel.get("approval_status"),
+        "approval_note": hotel.get("approval_note")
+    }
+
+    update_data = {
+        "approval_status": update.status,
+        "approval_note": update.admin_note,
+        "approved_at": datetime.now(timezone.utc).isoformat() if update.status == "approved" else None
+    }
+
+    await db.hotels.update_one({"id": hotel_id}, {"$set": update_data})
+    await log_admin_action(
+        admin_id=admin_id,
+        action="hotel_approval_update",
+        entity_type="hotel",
+        entity_id=hotel_id,
+        before=before,
+        after=update_data
+    )
+    return {"message": "Hotel approval updated"}
 
 @api_router.post("/admin/permit-types", response_model=PermitType)
 async def create_permit_type(permit_type: PermitTypeCreate, admin_id: str = Depends(get_admin_user)):
@@ -1161,6 +1440,270 @@ async def get_safety_tips():
 async def get_tourist_spots():
     spots = await db.tourist_spots.find({}, {"_id": 0}).to_list(100)
     return spots
+
+@api_router.get("/admin/tourist-spots", response_model=List[TouristSpot])
+async def admin_get_tourist_spots(admin_id: str = Depends(get_admin_user)):
+    spots = await db.tourist_spots.find({}, {"_id": 0}).sort("name", 1).to_list(1000)
+    return spots
+
+@api_router.post("/admin/tourist-spots/import")
+async def admin_import_tourist_spots(
+    spots: List[dict],
+    admin_id: str = Depends(get_admin_user)
+):
+    if not spots:
+        raise HTTPException(status_code=400, detail="No destinations provided")
+
+    existing = await db.tourist_spots.find({}, {"_id": 0, "name": 1, "id": 1, "rating": 1}).to_list(5000)
+    existing_by_name = {s.get("name"): s for s in existing}
+
+    def get_value(item: dict, *keys, default=None):
+        for key in keys:
+            if key in item and item[key] is not None:
+                return item[key]
+        return default
+
+    to_insert = []
+    updated = 0
+    for raw in spots:
+        if not isinstance(raw, dict):
+            continue
+        name = get_value(raw, "name")
+        if not name:
+            continue
+
+        location = get_value(raw, "region", "location", default="Nepal")
+        name_ne = get_value(raw, "nameNe", "name_ne")
+        category = get_value(raw, "category", default="cultural")
+        description = get_value(raw, "description", default="Description coming soon.")
+        best_time = get_value(raw, "bestTime", "best_time_to_visit")
+        permit = bool(get_value(raw, "permit", default=False))
+        permit_type = get_value(raw, "permitType", "permit_type")
+        difficulty = get_value(raw, "difficulty")
+        duration = get_value(raw, "duration")
+        attractions = get_value(raw, "attractions")
+        cost = get_value(raw, "cost")
+        image_url = get_value(raw, "image", "image_url")
+        region = get_value(raw, "region")
+        altitude = get_value(raw, "altitude")
+
+        if name in existing_by_name:
+            existing_record = existing_by_name.get(name) or {}
+            update_data = {
+                "name_ne": name_ne,
+                "category": category,
+                "description": description,
+                "location": location,
+                "rating": 4.5 if existing_record.get("rating") is None else None,
+                "best_time_to_visit": best_time,
+                "region": region,
+                "altitude": altitude,
+                "permit": permit,
+                "permit_type": permit_type,
+                "difficulty": difficulty,
+                "duration": duration,
+                "attractions": attractions,
+                "cost": cost,
+                "image_url": image_url
+            }
+            update_data = {k: v for k, v in update_data.items() if v is not None and v != ""}
+            if update_data:
+                await db.tourist_spots.update_one({"name": name}, {"$set": update_data})
+                updated += 1
+            continue
+
+        spot = TouristSpot(
+            id=str(get_value(raw, "id") or uuid.uuid4()),
+            name=str(name),
+            name_ne=str(name_ne) if name_ne else None,
+            category=str(category),
+            description=str(description),
+            latitude=None,
+            longitude=None,
+            location=str(location),
+            rating=4.5,
+            best_time_to_visit=str(best_time) if best_time else None,
+            region=str(region) if region else None,
+            altitude=str(altitude) if altitude else None,
+            permit=permit,
+            permit_type=str(permit_type) if permit_type else None,
+            difficulty=str(difficulty) if difficulty else None,
+            duration=str(duration) if duration else None,
+            attractions=str(attractions) if attractions else None,
+            cost=str(cost) if cost else None,
+            image_url=str(image_url) if image_url else None
+        )
+        to_insert.append(spot.model_dump())
+
+    if to_insert:
+        await db.tourist_spots.insert_many(to_insert)
+
+    await log_admin_action(
+        admin_id=admin_id,
+        action="tourist_spot_import",
+        entity_type="tourist_spot",
+        after={"inserted": len(to_insert), "updated": updated}
+    )
+
+    return {"message": "Destinations imported", "inserted": len(to_insert), "updated": updated}
+
+@api_router.post("/admin/tourist-spots", response_model=TouristSpot)
+async def admin_create_tourist_spot(
+    name: str = Form(...),
+    name_ne: Optional[str] = Form(None),
+    category: str = Form(...),
+    description: str = Form(...),
+    latitude: float = Form(...),
+    longitude: float = Form(...),
+    location: str = Form(...),
+    rating: float = Form(...),
+    best_time_to_visit: str = Form(...),
+    region: Optional[str] = Form(None),
+    altitude: Optional[str] = Form(None),
+    permit: Optional[bool] = Form(False),
+    permit_type: Optional[str] = Form(None),
+    difficulty: Optional[str] = Form(None),
+    duration: Optional[str] = Form(None),
+    attractions: Optional[str] = Form(None),
+    cost: Optional[str] = Form(None),
+    image: Optional[UploadFile] = File(None),
+    admin_id: str = Depends(get_admin_user)
+):
+    image_url = None
+    if image:
+        contents = await image.read()
+        image_data = base64.b64encode(contents).decode('utf-8')
+        content_type = image.content_type or "image/jpeg"
+        image_url = f"data:{content_type};base64,{image_data}"
+
+    spot = TouristSpot(
+        name=name.strip(),
+        name_ne=name_ne.strip() if name_ne else None,
+        category=category.strip(),
+        description=description.strip(),
+        latitude=latitude,
+        longitude=longitude,
+        location=location.strip(),
+        rating=rating,
+        best_time_to_visit=best_time_to_visit.strip(),
+        region=region.strip() if region else None,
+        altitude=altitude.strip() if altitude else None,
+        permit=permit,
+        permit_type=permit_type.strip() if permit_type else None,
+        difficulty=difficulty.strip() if difficulty else None,
+        duration=duration.strip() if duration else None,
+        attractions=attractions.strip() if attractions else None,
+        cost=cost.strip() if cost else None,
+        image_url=image_url
+    )
+    await db.tourist_spots.insert_one(spot.model_dump())
+    await log_admin_action(
+        admin_id=admin_id,
+        action="tourist_spot_create",
+        entity_type="tourist_spot",
+        entity_id=spot.id,
+        after=spot.model_dump()
+    )
+    return spot
+
+@api_router.patch("/admin/tourist-spots/{spot_id}")
+async def admin_update_tourist_spot(
+    spot_id: str,
+    name: Optional[str] = Form(None),
+    name_ne: Optional[str] = Form(None),
+    category: Optional[str] = Form(None),
+    description: Optional[str] = Form(None),
+    latitude: Optional[float] = Form(None),
+    longitude: Optional[float] = Form(None),
+    location: Optional[str] = Form(None),
+    rating: Optional[float] = Form(None),
+    best_time_to_visit: Optional[str] = Form(None),
+    region: Optional[str] = Form(None),
+    altitude: Optional[str] = Form(None),
+    permit: Optional[bool] = Form(None),
+    permit_type: Optional[str] = Form(None),
+    difficulty: Optional[str] = Form(None),
+    duration: Optional[str] = Form(None),
+    attractions: Optional[str] = Form(None),
+    cost: Optional[str] = Form(None),
+    image: Optional[UploadFile] = File(None),
+    admin_id: str = Depends(get_admin_user)
+):
+    existing = await db.tourist_spots.find_one({"id": spot_id})
+    if not existing:
+        raise HTTPException(status_code=404, detail="Tourist spot not found")
+
+    update_data = {}
+    if name is not None:
+        update_data["name"] = name.strip()
+    if name_ne is not None:
+        update_data["name_ne"] = name_ne.strip() if name_ne else None
+    if category is not None:
+        update_data["category"] = category.strip()
+    if description is not None:
+        update_data["description"] = description.strip()
+    if latitude is not None:
+        update_data["latitude"] = latitude
+    if longitude is not None:
+        update_data["longitude"] = longitude
+    if location is not None:
+        update_data["location"] = location.strip()
+    if rating is not None:
+        update_data["rating"] = rating
+    if best_time_to_visit is not None:
+        update_data["best_time_to_visit"] = best_time_to_visit.strip()
+    if region is not None:
+        update_data["region"] = region.strip() if region else None
+    if altitude is not None:
+        update_data["altitude"] = altitude.strip() if altitude else None
+    if permit is not None:
+        update_data["permit"] = permit
+    if permit_type is not None:
+        update_data["permit_type"] = permit_type.strip() if permit_type else None
+    if difficulty is not None:
+        update_data["difficulty"] = difficulty.strip() if difficulty else None
+    if duration is not None:
+        update_data["duration"] = duration.strip() if duration else None
+    if attractions is not None:
+        update_data["attractions"] = attractions.strip() if attractions else None
+    if cost is not None:
+        update_data["cost"] = cost.strip() if cost else None
+
+    if image:
+        contents = await image.read()
+        image_data = base64.b64encode(contents).decode('utf-8')
+        content_type = image.content_type or "image/jpeg"
+        update_data["image_url"] = f"data:{content_type};base64,{image_data}"
+
+    if not update_data:
+        raise HTTPException(status_code=400, detail="No valid updates provided")
+
+    await db.tourist_spots.update_one({"id": spot_id}, {"$set": update_data})
+    await log_admin_action(
+        admin_id=admin_id,
+        action="tourist_spot_update",
+        entity_type="tourist_spot",
+        entity_id=spot_id,
+        before={k: existing.get(k) for k in update_data.keys()},
+        after=update_data
+    )
+    return {"message": "Tourist spot updated"}
+
+@api_router.delete("/admin/tourist-spots/{spot_id}")
+async def admin_delete_tourist_spot(spot_id: str, admin_id: str = Depends(get_admin_user)):
+    existing = await db.tourist_spots.find_one({"id": spot_id})
+    if not existing:
+        raise HTTPException(status_code=404, detail="Tourist spot not found")
+
+    await db.tourist_spots.delete_one({"id": spot_id})
+    await log_admin_action(
+        admin_id=admin_id,
+        action="tourist_spot_delete",
+        entity_type="tourist_spot",
+        entity_id=spot_id,
+        before=existing
+    )
+    return {"message": "Tourist spot deleted"}
 
 
 # ==================== POINTS OF INTEREST (POI) - Overpass (OSM) PROXY ====================
@@ -1475,17 +2018,34 @@ def send_sos_notification(sos_record: dict, contacts: list):
         logging.error(f"[SOS] Failed to send email: {str(e)}")
 
 @api_router.get("/admin/sos-alerts")
-async def get_sos_alerts(admin_id: str = Depends(get_admin_user)):
+async def get_sos_alerts(status: Optional[str] = None, admin_id: str = Depends(get_admin_user)):
     """Get all SOS alerts (admin only)"""
-    alerts = await db.sos_alerts.find({}, {"_id": 0}).sort("created_at", -1).to_list(100)
+    query = {"status": status} if status else {}
+    alerts = await db.sos_alerts.find(query, {"_id": 0}).sort("created_at", -1).to_list(200)
     return alerts
 
 @api_router.patch("/admin/sos-alerts/{alert_id}")
-async def update_sos_alert(alert_id: str, status: dict, admin_id: str = Depends(get_admin_user)):
+async def update_sos_alert(alert_id: str, update: SosStatusUpdate, admin_id: str = Depends(get_admin_user)):
     """Update SOS alert status"""
-    await db.sos_alerts.update_one(
-        {"id": alert_id},
-        {"$set": {"status": status.get("status", "resolved"), "resolved_at": datetime.now(timezone.utc).isoformat()}}
+    alert = await db.sos_alerts.find_one({"id": alert_id})
+    if not alert:
+        raise HTTPException(status_code=404, detail="Alert not found")
+
+    before = {"status": alert.get("status")}
+    update_data = {
+        "status": update.status,
+        "admin_note": update.admin_note,
+        "resolved_at": datetime.now(timezone.utc).isoformat() if update.status == "resolved" else None
+    }
+
+    await db.sos_alerts.update_one({"id": alert_id}, {"$set": update_data})
+    await log_admin_action(
+        admin_id=admin_id,
+        action="sos_status_update",
+        entity_type="sos_alert",
+        entity_id=alert_id,
+        before=before,
+        after=update_data
     )
     return {"message": "Alert updated"}
 

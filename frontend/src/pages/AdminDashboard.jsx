@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { axiosInstance } from '@/App';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Users, Hotel, FileText, Clock, CheckCircle, XCircle, AlertTriangle, Building2, ArrowUpRight } from 'lucide-react';
+import { Users, Hotel, FileText, Clock, CheckCircle, XCircle, AlertTriangle, Building2, MapPin } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { toast } from 'sonner';
@@ -10,10 +10,13 @@ const AdminDashboard = () => {
   const [stats, setStats] = useState(null);
   const [loading, setLoading] = useState(true);
   const [sosAlerts, setSosAlerts] = useState([]);
+  const [recentUsers, setRecentUsers] = useState([]);
+  const [recentOwners, setRecentOwners] = useState([]);
 
   useEffect(() => {
     fetchStats();
     fetchSosAlerts();
+    fetchUsers();
   }, []);
 
   const fetchStats = async () => {
@@ -37,6 +40,22 @@ const AdminDashboard = () => {
     }
   };
 
+  const fetchUsers = async () => {
+    try {
+      const response = await axiosInstance.get('/admin/users');
+      const users = Array.isArray(response.data) ? response.data : [];
+      const sorted = users.slice().sort((a, b) => {
+        const aDate = new Date(a.created_at || 0).getTime();
+        const bDate = new Date(b.created_at || 0).getTime();
+        return bDate - aDate;
+      });
+      setRecentUsers(sorted.filter(u => u.role === 'user').slice(0, 6));
+      setRecentOwners(sorted.filter(u => u.role === 'hotel_owner').slice(0, 6));
+    } catch (error) {
+      console.error('Failed to fetch users');
+    }
+  };
+
   if (loading) {
     return (
       <div className="flex justify-center items-center h-screen bg-[#F9F9F7]">
@@ -53,7 +72,7 @@ const AdminDashboard = () => {
       icon: Users, 
       color: 'text-nepal-blue-500', 
       bg: 'bg-nepal-blue-50',
-      link: '/admin/bookings' 
+      link: '/admin/users?role=user&filter=all' 
     },
     { 
       label: 'Hotel Owners', 
@@ -62,7 +81,7 @@ const AdminDashboard = () => {
       icon: Building2, 
       color: 'text-amber-500', 
       bg: 'bg-amber-50',
-      link: '/admin/bookings' 
+      link: '/admin/users?role=hotel_owner&filter=all' 
     },
     { 
       label: 'Total Hotels', 
@@ -71,7 +90,16 @@ const AdminDashboard = () => {
       icon: Hotel, 
       color: 'text-emerald-500', 
       bg: 'bg-emerald-50',
-      link: '/admin/bookings' 
+      link: '/admin/hotels' 
+    },
+    { 
+      label: 'Destinations', 
+      value: stats?.total_tourist_spots || 0, 
+      sublabel: 'Tourist spots',
+      icon: MapPin, 
+      color: 'text-sky-600', 
+      bg: 'bg-sky-50',
+      link: '/admin/destinations' 
     },
     { 
       label: 'Total Bookings', 
@@ -100,6 +128,24 @@ const AdminDashboard = () => {
       bg: 'bg-yellow-50',
       link: '/admin/permits' 
     },
+    { 
+      label: 'Pending Hotels', 
+      value: stats?.pending_hotels || 0, 
+      sublabel: 'Need approval',
+      icon: Hotel, 
+      color: 'text-orange-600', 
+      bg: 'bg-orange-50',
+      link: '/admin/hotels' 
+    },
+    { 
+      label: 'Banned Users', 
+      value: stats?.banned_users || 0, 
+      sublabel: 'Restricted accounts',
+      icon: XCircle, 
+      color: 'text-red-600', 
+      bg: 'bg-red-50',
+      link: '/admin/users?filter=banned' 
+    },
   ];
 
   return (
@@ -127,6 +173,11 @@ const AdminDashboard = () => {
                 <h3 className="font-semibold text-nepal-red-700">Active Emergency Alerts</h3>
                 <p className="text-sm text-nepal-red-600">{sosAlerts.length} alert(s) require attention</p>
               </div>
+              <Link to="/admin/sos" className="ml-auto">
+                <Button size="sm" className="bg-nepal-red-600 hover:bg-nepal-red-700">
+                  Manage Alerts
+                </Button>
+              </Link>
             </div>
             <div className="space-y-2">
               {sosAlerts.map((alert) => (
@@ -171,59 +222,65 @@ const AdminDashboard = () => {
           ))}
         </div>
 
-        {/* Quick Actions */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+        {/* Recent Users & Hotel Owners */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-10">
           <Card className="bg-white border border-slate-100 shadow-sm rounded-2xl overflow-hidden">
-            <CardHeader className="pb-2">
-              <CardTitle className="font-heading text-xl">Review Permits</CardTitle>
+            <CardHeader className="pb-2 flex flex-row items-center justify-between">
+              <CardTitle className="font-heading text-xl">Recent Users</CardTitle>
+              <Link to="/admin/users?role=user&filter=all" className="text-xs font-semibold text-nepal-blue-600 hover:text-nepal-blue-700">
+                View all
+              </Link>
             </CardHeader>
             <CardContent>
-              <p className="text-sm text-slate-500 mb-4">
-                {stats?.pending_permits || 0} pending applications awaiting your review
-              </p>
-              <Link to="/admin/permits">
-                <Button className="w-full h-11 rounded-full bg-nepal-blue-500 hover:bg-nepal-blue-600 font-semibold">
-                  Review Applications
-                  <ArrowUpRight className="ml-2 h-4 w-4" />
-                </Button>
-              </Link>
+              {recentUsers.length === 0 ? (
+                <p className="text-sm text-slate-500">No users found.</p>
+              ) : (
+                <div className="space-y-3">
+                  {recentUsers.map((user) => (
+                    <div key={user.id} className="flex items-center justify-between p-3 bg-slate-50 rounded-xl">
+                      <div>
+                        <p className="font-medium text-slate-900">{user.name || 'Unnamed User'}</p>
+                        <p className="text-xs text-slate-500">{user.email}</p>
+                      </div>
+                      <span className="text-xs text-slate-400">
+                        {user.created_at ? new Date(user.created_at).toLocaleDateString() : '—'}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              )}
             </CardContent>
           </Card>
 
           <Card className="bg-white border border-slate-100 shadow-sm rounded-2xl overflow-hidden">
-            <CardHeader className="pb-2">
-              <CardTitle className="font-heading text-xl">Manage Permit Types</CardTitle>
+            <CardHeader className="pb-2 flex flex-row items-center justify-between">
+              <CardTitle className="font-heading text-xl">Recent Hotel Owners</CardTitle>
+              <Link to="/admin/users?role=hotel_owner&filter=all" className="text-xs font-semibold text-amber-600 hover:text-amber-700">
+                View all
+              </Link>
             </CardHeader>
             <CardContent>
-              <p className="text-sm text-slate-500 mb-4">
-                Add or modify available trekking permit types
-              </p>
-              <Link to="/admin/permit-types">
-                <Button className="w-full h-11 rounded-full bg-purple-600 hover:bg-purple-700 font-semibold">
-                  Manage Types
-                  <ArrowUpRight className="ml-2 h-4 w-4" />
-                </Button>
-              </Link>
-            </CardContent>
-          </Card>
-
-          <Card className="bg-white border border-slate-100 shadow-sm rounded-2xl overflow-hidden">
-            <CardHeader className="pb-2">
-              <CardTitle className="font-heading text-xl">View Bookings</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <p className="text-sm text-slate-500 mb-4">
-                Monitor all hotel bookings and user activity
-              </p>
-              <Link to="/admin/bookings">
-                <Button className="w-full h-11 rounded-full bg-emerald-600 hover:bg-emerald-700 font-semibold">
-                  View Details
-                  <ArrowUpRight className="ml-2 h-4 w-4" />
-                </Button>
-              </Link>
+              {recentOwners.length === 0 ? (
+                <p className="text-sm text-slate-500">No hotel owners found.</p>
+              ) : (
+                <div className="space-y-3">
+                  {recentOwners.map((owner) => (
+                    <div key={owner.id} className="flex items-center justify-between p-3 bg-amber-50 rounded-xl">
+                      <div>
+                        <p className="font-medium text-slate-900">{owner.name || 'Unnamed Owner'}</p>
+                        <p className="text-xs text-slate-500">{owner.email}</p>
+                      </div>
+                      <span className="text-xs text-slate-400">
+                        {owner.created_at ? new Date(owner.created_at).toLocaleDateString() : '—'}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              )}
             </CardContent>
           </Card>
         </div>
+
       </div>
     </div>
   );

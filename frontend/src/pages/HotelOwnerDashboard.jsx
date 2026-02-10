@@ -88,6 +88,39 @@ const HotelOwnerDashboard = () => {
               <p className="text-sm text-red-700 mt-1">Cancelled bookings</p>
             </CardContent>
           </Card>
+
+          <Card className="border-2 hover:shadow-xl transition bg-gradient-to-br from-yellow-50 to-yellow-100">
+            <CardHeader className="flex flex-row items-center justify-between pb-2">
+              <CardTitle className="text-lg font-semibold">Pending Hotels</CardTitle>
+              <Hotel className="h-8 w-8 text-yellow-600" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-4xl font-bold text-yellow-700">{stats?.pending_hotels || 0}</div>
+              <p className="text-sm text-yellow-700 mt-1">Awaiting approval</p>
+            </CardContent>
+          </Card>
+
+          <Card className="border-2 hover:shadow-xl transition bg-gradient-to-br from-emerald-50 to-emerald-100">
+            <CardHeader className="flex flex-row items-center justify-between pb-2">
+              <CardTitle className="text-lg font-semibold">Approved Hotels</CardTitle>
+              <Hotel className="h-8 w-8 text-emerald-600" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-4xl font-bold text-emerald-700">{stats?.approved_hotels || 0}</div>
+              <p className="text-sm text-emerald-700 mt-1">Visible to users</p>
+            </CardContent>
+          </Card>
+
+          <Card className="border-2 hover:shadow-xl transition bg-gradient-to-br from-gray-50 to-gray-100">
+            <CardHeader className="flex flex-row items-center justify-between pb-2">
+              <CardTitle className="text-lg font-semibold">Rejected Hotels</CardTitle>
+              <Hotel className="h-8 w-8 text-gray-600" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-4xl font-bold text-gray-700">{stats?.rejected_hotels || 0}</div>
+              <p className="text-sm text-gray-700 mt-1">Needs revision</p>
+            </CardContent>
+          </Card>
         </div>
 
         {/* Quick Actions */}

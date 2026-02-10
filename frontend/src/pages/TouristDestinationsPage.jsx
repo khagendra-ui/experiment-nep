@@ -1,9 +1,10 @@
-import { useState } from 'react';
-import { MapPin, Users, Clock, AlertCircle, ExternalLink, Ticket, Star } from 'lucide-react';
+import { useEffect, useState } from 'react';
+import { MapPin, Users, Clock, AlertCircle, ExternalLink, Ticket, Star, Mountain } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { useLanguage } from '@/context/LanguageContext';
 import { Link } from 'react-router-dom';
+import { axiosInstance } from '@/App';
 
 // Shared destination data used across the app - includes all tourist locations with bilingual content
 export const destinationsData = [
@@ -470,10 +471,48 @@ export const destinationsData = [
     }
   ];
 
+const DESTINATION_IMAGE_FALLBACK = 'https://images.unsplash.com/photo-1469474968028-56623f02e42e?w=1200&q=80&auto=format&fit=crop';
+
+const normalizeCategory = (category) => {
+  const value = String(category || '').toLowerCase();
+  if (value.includes('park')) return 'national-park';
+  if (value.includes('trek')) return 'trekking';
+  if (value.includes('adventure')) return 'adventure';
+  if (value.includes('culture') || value.includes('temple') || value.includes('heritage')) return 'cultural';
+  return value || 'cultural';
+};
+
 const TouristDestinationsPage = () => {
   const { t, language } = useLanguage();
   const [selectedCategory, setSelectedCategory] = useState('all');
-  const destinations = destinationsData;
+  const [destinations, setDestinations] = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    let isMounted = true;
+    const fetchDestinations = async () => {
+      try {
+        const response = await axiosInstance.get('/tourist-spots');
+        const spots = Array.isArray(response.data) ? response.data : [];
+        if (isMounted) {
+          setDestinations(spots);
+        }
+      } catch (error) {
+        if (isMounted) {
+          setDestinations([]);
+        }
+      } finally {
+        if (isMounted) {
+          setLoading(false);
+        }
+      }
+    };
+
+    fetchDestinations();
+    return () => {
+      isMounted = false;
+    };
+  }, []);
 
   const categories = [
     { id: 'all', label: language === 'en' ? 'All Destinations' : 'सबै गन्तव्य' },
@@ -483,20 +522,31 @@ const TouristDestinationsPage = () => {
     { id: 'cultural', label: language === 'en' ? 'Cultural Sites' : 'सांस्कृतिक स्थल' }
   ];
 
-  const filteredDestinations = selectedCategory === 'all' 
-    ? destinations 
-    : destinations.filter(d => d.category === selectedCategory);
+  const filteredDestinations = selectedCategory === 'all'
+    ? destinations
+    : destinations.filter((d) => normalizeCategory(d.category) === selectedCategory);
 
-  const permitDestinations = destinations.filter(d => d.permit);
+  const permitDestinations = destinations.filter((d) => d.permit);
+
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-slate-50 to-slate-100 py-12 px-4">
       <div className="max-w-7xl mx-auto">
         {/* Header */}
         <div className="mb-12 text-center">
-          <h1 className="text-5xl md:text-6xl font-bold text-slate-900 mb-4">
-            {language === 'en' ? '🏔️ Tourist Destinations' : '🏔️ पर्यटन गन्तव्य'}
-          </h1>
+          <div className="flex items-center justify-center gap-3 text-slate-900 mb-4">
+            <Mountain className="h-10 w-10 text-nepal-blue-500" />
+            <h1 className="text-5xl md:text-6xl font-bold">
+              {language === 'en' ? 'Tourist Destinations' : 'पर्यटन गन्तव्य'}
+            </h1>
+          </div>
           <p className="text-xl text-slate-600 max-w-2xl mx-auto">
             {language === 'en' 
               ? 'Explore Nepal\'s most stunning destinations, national parks, trekking routes, and adventure areas.'
@@ -523,21 +573,24 @@ const TouristDestinationsPage = () => {
 
         {/* Destinations Grid */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-12">
-          {filteredDestinations.map(destination => (
+          {filteredDestinations.map((destination) => {
+            const categoryKey = normalizeCategory(destination.category);
+            const imageSrc = destination.image_url || DESTINATION_IMAGE_FALLBACK;
+            return (
             <Card key={destination.id} className="overflow-hidden hover:shadow-xl transition-shadow">
               {/* Image */}
               <div className="relative h-48 overflow-hidden">
                 <img 
-                  src={destination.image} 
+                  src={imageSrc}
                   alt={destination.name}
                   className="w-full h-full object-cover hover:scale-110 transition-transform duration-300"
                 />
                 <div className="absolute top-3 right-3 bg-nepal-blue-500 text-white px-3 py-1 rounded-full text-sm font-semibold flex items-center gap-1">
                   <Star className="h-4 w-4" />
-                  {destination.category === 'national-park' && (language === 'en' ? 'Park' : 'पार्क')}
-                  {destination.category === 'trekking' && (language === 'en' ? 'Trek' : 'ट्रेक')}
-                  {destination.category === 'adventure' && (language === 'en' ? 'Adventure' : 'साहस')}
-                  {destination.category === 'cultural' && (language === 'en' ? 'Culture' : 'संस्कृति')}
+                  {categoryKey === 'national-park' && (language === 'en' ? 'Park' : 'पार्क')}
+                  {categoryKey === 'trekking' && (language === 'en' ? 'Trek' : 'ट्रेक')}
+                  {categoryKey === 'adventure' && (language === 'en' ? 'Adventure' : 'साहस')}
+                  {categoryKey === 'cultural' && (language === 'en' ? 'Culture' : 'संस्कृति')}
                 </div>
                 {destination.permit && (
                   <div className="absolute top-3 left-3 bg-emerald-600 text-white px-3 py-1 rounded-full text-xs font-semibold flex items-center gap-1">
@@ -549,7 +602,9 @@ const TouristDestinationsPage = () => {
 
               <CardContent className="p-6">
                 <h3 className="text-xl font-bold text-slate-900 mb-2">{destination.name}</h3>
-                <p className="text-sm text-slate-600 mb-3">{destination.nameNe}</p>
+                {destination.name_ne && (
+                  <p className="text-sm text-slate-600 mb-3">{destination.name_ne}</p>
+                )}
                 
                 <p className="text-slate-700 mb-4 line-clamp-2">{destination.description}</p>
 
@@ -557,11 +612,11 @@ const TouristDestinationsPage = () => {
                 <div className="grid grid-cols-2 gap-3 mb-4 text-sm">
                   <div className="flex items-center gap-2 text-slate-600">
                     <MapPin className="h-4 w-4 text-nepal-blue-500" />
-                    <span>{destination.altitude}</span>
+                    <span>{destination.altitude || destination.region || destination.location}</span>
                   </div>
                   <div className="flex items-center gap-2 text-slate-600">
                     <Clock className="h-4 w-4 text-nepal-gold-500" />
-                    <span>{destination.duration || destination.difficulty}</span>
+                    <span>{destination.duration || destination.difficulty || '-'}</span>
                   </div>
                   {destination.cost && (
                     <div className="flex items-center gap-2 text-slate-600">
@@ -576,7 +631,7 @@ const TouristDestinationsPage = () => {
                   <p className="text-xs font-semibold text-slate-500 mb-1 uppercase">
                     {language === 'en' ? 'Highlights' : 'मुख्य आकर्षण'}
                   </p>
-                  <p className="text-sm text-slate-600 line-clamp-2">{destination.attractions}</p>
+                  <p className="text-sm text-slate-600 line-clamp-2">{destination.attractions || destination.description}</p>
                 </div>
 
                 {/* Best Time */}
@@ -584,7 +639,7 @@ const TouristDestinationsPage = () => {
                   <p className="text-xs font-semibold text-slate-500 mb-1">
                     {language === 'en' ? 'Best Time to Visit' : 'भ्रमणको उत्तम समय'}
                   </p>
-                  <p className="text-sm text-slate-700">{destination.bestTime}</p>
+                  <p className="text-sm text-slate-700">{destination.best_time_to_visit || 'Year-round'}</p>
                 </div>
 
                 {/* Action Button */}
@@ -604,7 +659,8 @@ const TouristDestinationsPage = () => {
                 </Link>
               </CardContent>
             </Card>
-          ))}
+          );
+          })}
         </div>
 
         {/* Permit Info Section */}
@@ -625,7 +681,9 @@ const TouristDestinationsPage = () => {
                   {permitDestinations.map(dest => (
                     <div key={dest.id} className="bg-white rounded-lg p-3 border border-emerald-200">
                       <p className="font-semibold text-slate-800">{dest.name}</p>
-                      <p className="text-xs text-emerald-600 mt-1">{dest.permitType} Permit</p>
+                      {dest.permit_type && (
+                        <p className="text-xs text-emerald-600 mt-1">{dest.permit_type} Permit</p>
+                      )}
                     </div>
                   ))}
                 </div>

@@ -2,6 +2,9 @@ import { useEffect, useState, useRef } from 'react';
 import { MapContainer, TileLayer, Marker, Popup, useMap } from 'react-leaflet';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
+import 'leaflet.markercluster';
+import 'leaflet.markercluster/dist/MarkerCluster.css';
+import 'leaflet.markercluster/dist/MarkerCluster.Default.css';
 import { axiosInstance } from '@/App';
 import { Hotel, AlertTriangle, MapPin, Navigation, X, Search } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -24,11 +27,22 @@ L.Icon.Default.mergeOptions({
 });
 
 // Custom icons
-const createCustomIcon = (color, icon) => {
+const mapColors = {
+  hotel: 'hsl(var(--primary))',
+  emergency: 'hsl(var(--destructive))',
+  spot: 'hsl(var(--secondary))',
+  user: 'hsl(var(--accent))',
+  route: 'hsl(var(--primary))',
+  poiPrimary: 'hsl(var(--accent))',
+  poiSecondary: 'hsl(var(--secondary))',
+  weather: 'hsl(var(--accent))'
+};
+
+const createCustomIcon = (bgColor, icon, fgColor = 'white') => {
   return L.divIcon({
     className: 'custom-icon',
-    html: `<div style="background-color: ${color}; width: 40px; height: 40px; border-radius: 50%; display: flex; align-items: center; justify-content: center; border: 3px solid white; box-shadow: 0 4px 12px rgba(0,0,0,0.3);">
-      <svg width="22" height="22" viewBox="0 0 24 24" fill="white" stroke="white" stroke-width="2">
+    html: `<div style="background-color: ${bgColor}; color: ${fgColor}; width: 40px; height: 40px; border-radius: 50%; display: flex; align-items: center; justify-content: center; border: 3px solid white; box-shadow: 0 4px 12px rgba(0,0,0,0.3);">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" stroke-width="2">
         ${icon}
       </svg>
     </div>`,
@@ -38,10 +52,12 @@ const createCustomIcon = (color, icon) => {
   });
 };
 
-const hotelIcon = createCustomIcon('#3b82f6', '<path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path><polyline points="9 22 9 12 15 12 15 22"></polyline>');
-const emergencyIcon = createCustomIcon('#ef4444', '<circle cx="12" cy="12" r="10"></circle><line x1="12" y1="8" x2="12" y2="12"></line><line x1="12" y1="16" x2="12.01" y2="16"></line>');
-const spotIcon = createCustomIcon('#10b981', '<path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path><circle cx="12" cy="10" r="3"></circle>');
-const userIcon = createCustomIcon('#8b5cf6', '<path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle>');
+const hotelIcon = createCustomIcon(mapColors.hotel, '<path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path><polyline points="9 22 9 12 15 12 15 22"></polyline>');
+const emergencyIcon = createCustomIcon(mapColors.emergency, '<circle cx="12" cy="12" r="10"></circle><line x1="12" y1="8" x2="12" y2="12"></line><line x1="12" y1="16" x2="12.01" y2="16"></line>');
+const spotIcon = createCustomIcon(mapColors.spot, '<path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path><circle cx="12" cy="10" r="3"></circle>');
+const userIcon = createCustomIcon(mapColors.user, '<path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle>');
+
+const hasValidCoords = (lat, lng) => Number.isFinite(lat) && Number.isFinite(lng);
 
 function RoutingMachine({ start, end, onRouteFound }) {
   const map = useMap();
@@ -73,7 +89,7 @@ function RoutingMachine({ start, end, onRouteFound }) {
           showAlternatives: false,
           addWaypoints: false,
           lineOptions: {
-            styles: [{ color: '#3b82f6', weight: 6, opacity: 0.9 }],
+            styles: [{ color: mapColors.route, weight: 6, opacity: 0.9 }],
             extendToWaypoints: false,
             missingRouteTolerance: 0
           },
@@ -188,7 +204,7 @@ function MapControls({ onFindPois, onFindWeather, onFindTourist }) {
 }
 
 // MarkerCluster helper component using leaflet.markercluster
-function MarkerCluster({ items = [], iconColor = '#10b981', popupRenderer, onItemClick }) {
+function MarkerCluster({ items = [], iconColor = mapColors.spot, popupRenderer, onItemClick }) {
   const map = useMap();
   const layerRef = useRef(null);
 
@@ -201,7 +217,7 @@ function MarkerCluster({ items = [], iconColor = '#10b981', popupRenderer, onIte
       layerRef.current = null;
     }
 
-    const group = L.markerClusterGroup();
+    const group = typeof L.markerClusterGroup === 'function' ? L.markerClusterGroup() : L.layerGroup();
 
     items.forEach((item) => {
       if (!item || !item.latitude || !item.longitude) return;
@@ -338,9 +354,9 @@ const MapPage = () => {
     } catch (err) {
       console.error('Weather fetch error:', err);
       const msg = err?.response?.data?.detail || err?.message || 'Failed to fetch weather';
-      // If OpenWeather key missing, fall back to Open-Meteo fallback endpoint on the backend
-      if (msg && msg.toString().includes('OPENWEATHER_API_KEY')) {
-        toast('OpenWeather API key not configured, using fallback weather (no alerts)');
+      const shouldFallback = err?.response?.status === 400 || (msg && msg.toString().includes('OPENWEATHER_API_KEY'));
+      if (shouldFallback) {
+        toast('Using fallback weather (no alerts).');
         try {
           const fallback = await axiosInstance.get('/weather/fallback', { params: { lat: center.lat, lon: center.lng } });
           setWeather(fallback.data);
@@ -349,9 +365,9 @@ const MapPage = () => {
           console.error('Fallback weather fetch error:', fbErr);
           toast.error('Failed to fetch fallback weather');
         }
-      } else {
-        toast.error(msg);
+        return;
       }
+      toast.error(msg);
     }
   };
 
@@ -368,6 +384,7 @@ const MapPage = () => {
 
     // Search in hotels
     hotels.forEach(hotel => {
+      if (!hasValidCoords(hotel.latitude, hotel.longitude)) return;
       if (hotel.name.toLowerCase().includes(lowerQuery) || hotel.location.toLowerCase().includes(lowerQuery)) {
         results.push({
           id: hotel.id,
@@ -382,6 +399,7 @@ const MapPage = () => {
 
     // Search in tourist spots
     touristSpots.forEach(spot => {
+      if (!hasValidCoords(spot.latitude, spot.longitude)) return;
       if (spot.name.toLowerCase().includes(lowerQuery) || spot.location.toLowerCase().includes(lowerQuery)) {
         results.push({
           id: spot.id,
@@ -396,6 +414,7 @@ const MapPage = () => {
 
     // Search in emergency contacts
     emergencyContacts.forEach(contact => {
+      if (!hasValidCoords(contact.latitude, contact.longitude)) return;
       if (contact.name.toLowerCase().includes(lowerQuery) || contact.location.toLowerCase().includes(lowerQuery)) {
         results.push({
           id: contact.id,
@@ -519,7 +538,7 @@ const MapPage = () => {
         )}
 
         {/* Hotels */}
-        {showLayers.hotels && hotels.map((hotel) => (
+        {showLayers.hotels && hotels.filter((hotel) => hasValidCoords(hotel.latitude, hotel.longitude)).map((hotel) => (
           <Marker
             key={hotel.id}
             position={[hotel.latitude, hotel.longitude]}
@@ -547,7 +566,7 @@ const MapPage = () => {
         ))}
 
         {/* Emergency Contacts */}
-        {showLayers.emergency && emergencyContacts.map((contact) => (
+        {showLayers.emergency && emergencyContacts.filter((contact) => hasValidCoords(contact.latitude, contact.longitude)).map((contact) => (
           <Marker
             key={contact.id}
             position={[contact.latitude, contact.longitude]}
@@ -575,7 +594,7 @@ const MapPage = () => {
         ))}
 
         {/* Tourist Spots */}
-        {showLayers.spots && touristSpots.map((spot) => (
+        {showLayers.spots && touristSpots.filter((spot) => hasValidCoords(spot.latitude, spot.longitude)).map((spot) => (
           <Marker
             key={spot.id}
             position={[spot.latitude, spot.longitude]}
@@ -586,7 +605,6 @@ const MapPage = () => {
                 <h3 className="font-bold text-lg mb-2 text-green-900">{spot.name}</h3>
                 <p className="text-sm text-gray-600 mb-2">{spot.description}</p>
                 <p className="text-sm text-yellow-600 mb-3 flex items-center">
-                  ⭐ Rating: {spot.rating}/5
                   ⭐ {t('rating')}: {spot.rating}/5
                 </p>
                 <Button
@@ -632,7 +650,7 @@ const MapPage = () => {
         )}
 
         {/* Weather marker */}
-        {showWeather && weather && (
+        {showWeather && weather && hasValidCoords(weather.lat, weather.lon) && (
           <Marker position={[weather.lat, weather.lon]} icon={createCustomIcon('#f59e0b', '<path d="M12 2l2 4 4 .5-3 3 .7 4-3.7-1.8L8 19l.7-4L6 12l4-.5z"></path>')}>
             <Popup>
               <div className="min-w-[220px] p-2">
@@ -788,7 +806,7 @@ const MapPage = () => {
         </div>
       </Card>
 
-      <style jsx>{`
+      <style>{`
         @keyframes slideUp {
           from {
             opacity: 0;

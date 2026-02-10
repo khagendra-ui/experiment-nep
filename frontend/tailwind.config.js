@@ -15,20 +15,24 @@ module.exports = {
             colors: {
                 // Nepal-inspired colors
                 'nepal-blue': {
-                    50: '#E6F0FF',
-                    100: '#CCE0FF',
-                    500: '#003893',
-                    600: '#002A70',
-                    900: '#001A4D',
+                    50: '#E6EBF3',
+                    100: '#CCD6E6',
+                    500: '#0B1F3A',
+                    600: '#08162B',
+                    900: '#050F1C',
                 },
                 'nepal-red': {
-                    50: '#FDE8EC',
-                    500: '#DC143C',
-                    600: '#B01030',
-                    900: '#7A0B21',
+                    50: '#F2E9E7',
+                    500: '#8C3B2F',
+                    600: '#6E2E25',
+                    900: '#3E1B16',
                 },
                 'nepal-gold': {
-                    500: '#EFB316',
+                    500: '#C9A227',
+                },
+                'nepal-green': {
+                    500: '#2F4E4A',
+                    600: '#263F3B',
                 },
                 background: 'hsl(var(--background))',
                 foreground: 'hsl(var(--foreground))',

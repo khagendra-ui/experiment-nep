@@ -127,6 +127,16 @@ const ManageHotelsPage = () => {
                 </CardHeader>
                 <CardContent>
                   <div className="space-y-3">
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs text-gray-500">Status</span>
+                      <span className={`px-2 py-1 rounded-full text-xs font-semibold ${
+                        hotel.approval_status === 'approved' ? 'bg-green-100 text-green-700' :
+                        hotel.approval_status === 'rejected' ? 'bg-red-100 text-red-700' :
+                        'bg-yellow-100 text-yellow-700'
+                      }`}>
+                        {hotel.approval_status || 'approved'}
+                      </span>
+                    </div>
                     <div className="flex items-center text-gray-600">
                       <MapPin className="h-4 w-4 mr-2" />
                       <span className="text-sm">{hotel.location}</span>

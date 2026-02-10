@@ -17,10 +17,17 @@ import AdminDashboard from "@/pages/AdminDashboard";
 import AdminPermits from "@/pages/AdminPermits";
 import AdminBookings from "@/pages/AdminBookings";
 import AdminPermitTypes from "@/pages/AdminPermitTypes";
+import AdminHotels from "@/pages/AdminHotels";
+import AdminUsers from "@/pages/AdminUsers";
+import AdminAuditLogs from "@/pages/AdminAuditLogs";
+import AdminSosAlerts from "@/pages/AdminSosAlerts";
+import AdminDestinations from "@/pages/AdminDestinations";
 import HotelOwnerDashboard from "@/pages/HotelOwnerDashboard";
 import AddHotelPage from "@/pages/AddHotelPage";
 import ManageHotelsPage from "@/pages/ManageHotelsPage";
 import HotelOwnerBookingsPage from "@/pages/HotelOwnerBookingsPage";
+import PrivacyPolicy from "@/pages/PrivacyPolicy";
+import TermsOfService from "@/pages/TermsOfService";
 import Navbar from "@/components/Navbar";
 import AuthModal from "@/components/AuthModal";
 import SOSButton from "@/components/SOSButton";
@@ -115,6 +122,8 @@ function App() {
             <Route path="/safety" element={<SafetyPage />} />
             <Route path="/destinations" element={<TouristDestinationsPage />} />
             <Route path="/destinations/:id" element={<DestinationDetailPage />} />
+            <Route path="/privacy" element={<PrivacyPolicy />} />
+            <Route path="/terms" element={<TermsOfService />} />
             
             {/* Protected routes - requires auth */}
             <Route path="/permits" element={user ? <PermitsPage user={user} /> : <Navigate to="/" />} />
@@ -125,6 +134,11 @@ function App() {
             <Route path="/admin/permits" element={user?.role === 'admin' ? <AdminPermits /> : <Navigate to="/" />} />
             <Route path="/admin/bookings" element={user?.role === 'admin' ? <AdminBookings /> : <Navigate to="/" />} />
             <Route path="/admin/permit-types" element={user?.role === 'admin' ? <AdminPermitTypes /> : <Navigate to="/" />} />
+            <Route path="/admin/hotels" element={user?.role === 'admin' ? <AdminHotels /> : <Navigate to="/" />} />
+            <Route path="/admin/users" element={user?.role === 'admin' ? <AdminUsers /> : <Navigate to="/" />} />
+            <Route path="/admin/audit-logs" element={user?.role === 'admin' ? <AdminAuditLogs /> : <Navigate to="/" />} />
+            <Route path="/admin/sos" element={user?.role === 'admin' ? <AdminSosAlerts /> : <Navigate to="/" />} />
+            <Route path="/admin/destinations" element={user?.role === 'admin' ? <AdminDestinations /> : <Navigate to="/" />} />
             
             {/* Hotel owner routes */}
             <Route path="/hotel-owner" element={user?.role === 'hotel_owner' ? <HotelOwnerDashboard /> : <Navigate to="/" />} />
